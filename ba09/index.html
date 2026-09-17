@@ -1231,7 +1231,7 @@ window.VD_MODULES.BA09 = {
 'use strict';
 /* ═══════════════════════════ Konfiguration ═══════════════════════════ */
 const CFG_KEY='vd_config_v1', STATE_KEY='vd_state_v1';
-const DEFAULT_CFG={customer:'MH-Handel', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
+const DEFAULT_CFG={customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
 let cfg=loadJSON(CFG_KEY,{});
 cfg=Object.assign({},DEFAULT_CFG,cfg);
 /* URL-Parameter (z. B. per QR-Code): ?kunde=Firma&mail=arbeitsschutz@firma.de&lang=de&video=https://… */
@@ -1383,12 +1383,14 @@ function vLang(main){
 
 /* ── 2 Identifikation ────────────────────────────────────────────────── */
 function vWho(main){
-  const p=S.person||{first:'',last:'',pnr:'',dept:''};
+  const p=Object.assign({first:'',last:'',pnr:'',dept:'',company:''},S.person||{});
+  if(!p.company&&cfg.customer!=='Musterbetrieb')p.company=cfg.customer;
   const f=(id,label,hint,req)=>{const wrap=el('div',{class:'field'},el('label',{for:'f_'+id},label,req?'':el('span',{class:'muted'},' ('+T('optional')+')')),el('input',{class:'input',id:'f_'+id,value:p[id]||'',autocomplete:'off',autocapitalize:'words',enterkeyhint:'next'}));if(hint)wrap.append(el('div',{class:'hint'},hint));return wrap;};
   const consent=el('input',{type:'checkbox',id:'consent'});
   const err=el('div',{class:'err',hidden:true});
   const card=el('div',{class:'card stack'},
     el('h1',{},T('who')),el('p',{class:'muted'},T('whoHint')),
+    f('company',T('company'),null,true),
     el('div',{class:'grid-2'},f('first',T('firstName'),null,true),f('last',T('lastName'),null,true)),
     el('div',{class:'grid-2'},f('pnr',T('personnelNo'),T('personnelHint'),false),f('dept',T('department'),null,false)),
     el('div',{class:'notice'},T('privacy'),el('div',{class:'small',style:'margin-top:6px'},cfg.mail?el('span',{},el('span',{html:ICON.mail,style:'display:inline-block;width:16px;vertical-align:-3px;margin-right:6px'}),T('sendMail',{company:cfg.customer})+': ',el('b',{},cfg.mail)):el('b',{style:'color:var(--danger)'},T('noMail')))),
@@ -1398,10 +1400,11 @@ function vWho(main){
       el('button',{class:'btn secondary',onclick:()=>go('lang')},el('span',{html:ICON.back}),T('back')),
       el('button',{class:'btn big',onclick:()=>{
         const v=id=>$('#f_'+id).value.trim();
-        let ok=true;for(const id of ['first','last']){const i=$('#f_'+id);i.classList.toggle('invalid',!v(id));if(!v(id))ok=false;}
+        let ok=true;for(const id of ['company','first','last']){const i=$('#f_'+id);i.classList.toggle('invalid',!v(id));if(!v(id))ok=false;}
         if(!consent.checked)ok=false;
         err.hidden=ok;err.textContent=T('required');if(!ok)return;
-        S.person={first:v('first'),last:v('last'),pnr:v('pnr'),dept:v('dept')};
+        S.person={first:v('first'),last:v('last'),pnr:v('pnr'),dept:v('dept'),company:v('company')};
+        cfg.customer=v('company');saveJSON(CFG_KEY,cfg);
         S.segIdx=0;S.seen={};S.questions=[];S.quiz=null;S.proof=null;S.doneModules=S.doneModules||{};
         go('modules');
       }},T('start'),el('span',{html:ICON.next}))));
@@ -1440,7 +1443,7 @@ function vSeg(main){
   const segs=L().segments, i=S.segIdx, seg=segs[i];
   let built=false, curVideo=null, renderPending=false;
   /* Neu zeichnen erst nach dem Ende des Videos, sonst bricht der Ton bei 90 Prozent ab. */
-  const markSeen=()=>{if(S.seen[seg.id])return;S.seen[seg.id]=true;save();if(!built)return;if(curVideo&&!curVideo.paused&&!curVideo.ended){renderPending=true;}else render();};
+  const markSeen=()=>{if(S.seen[seg.id])return;S.seen[seg.id]=true;save();if(!built||!topics.isConnected)return;if(curVideo&&!curVideo.paused&&!curVideo.ended){renderPending=true;}else render();};
   /* Themenleiste: aktuelles Thema wandert mit */
   const topics=el('div',{class:'topics',role:'tablist'});
   segs.forEach((s,idx)=>{const c=el('button',{class:'chip'+(idx===i?' active':S.seen[s.id]?' seen':' todo')+(S.repeatList&&S.repeatList.includes(s.id)?' accent':''),role:'tab','aria-selected':idx===i,onclick:()=>go('seg',{segIdx:idx})},idx>0?el('span',{class:'n'},String(idx)):null,s.short);topics.append(c);});
@@ -1489,7 +1492,7 @@ function vSeg(main){
       if(shots.length>1&&v.duration){const n=Math.min(shots.length-1,Math.floor(v.currentTime/v.duration*shots.length));
         shots.forEach((f,k)=>f.classList.toggle('on',k===n));}
     });
-    v.addEventListener('ended',()=>{markSeen();if(renderPending){renderPending=false;render();}});
+    v.addEventListener('ended',()=>{markSeen();if(renderPending&&topics.isConnected){renderPending=false;render();}});
     hasVideo=true;
     const av=el('div',{class:'stage-av'},v,cfg.avatarNote?el('span',{class:'avatar-note'},'KI-Avatar'):null);
     stage=el('div',{class:'stage'+(keinBild?' nopic':'')},av,info);
