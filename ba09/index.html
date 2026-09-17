@@ -1438,8 +1438,9 @@ function vModules(main){
 /* ── 3 Abschnitte ────────────────────────────────────────────────────── */
 function vSeg(main){
   const segs=L().segments, i=S.segIdx, seg=segs[i];
-  let built=false;
-  const markSeen=()=>{if(!S.seen[seg.id]){S.seen[seg.id]=true;save();if(built)render();}};
+  let built=false, curVideo=null, renderPending=false;
+  /* Neu zeichnen erst nach dem Ende des Videos, sonst bricht der Ton bei 90 Prozent ab. */
+  const markSeen=()=>{if(S.seen[seg.id])return;S.seen[seg.id]=true;save();if(!built)return;if(curVideo&&!curVideo.paused&&!curVideo.ended){renderPending=true;}else render();};
   /* Themenleiste: aktuelles Thema wandert mit */
   const topics=el('div',{class:'topics',role:'tablist'});
   segs.forEach((s,idx)=>{const c=el('button',{class:'chip'+(idx===i?' active':S.seen[s.id]?' seen':' todo')+(S.repeatList&&S.repeatList.includes(s.id)?' accent':''),role:'tab','aria-selected':idx===i,onclick:()=>go('seg',{segIdx:idx})},idx>0?el('span',{class:'n'},String(idx)):null,s.short);topics.append(c);});
@@ -1453,7 +1454,7 @@ function vSeg(main){
   const imgs=(MOD.images&&MOD.images[seg.id])||[];
   let hasVideo=false, stage=null;
   if(videoUrl){
-    const v=el('video',{playsinline:true,preload:'metadata',src:videoUrl});
+    const v=el('video',{playsinline:true,preload:'metadata',src:videoUrl});curVideo=v;
     /* Rechte Fläche: Bilder wechseln im Takt des Videos, sonst stehen dort die Merkpunkte. */
     const info=el('div',{class:'stage-info'});
     let shots=[], keinBild=false;
@@ -1488,7 +1489,7 @@ function vSeg(main){
       if(shots.length>1&&v.duration){const n=Math.min(shots.length-1,Math.floor(v.currentTime/v.duration*shots.length));
         shots.forEach((f,k)=>f.classList.toggle('on',k===n));}
     });
-    v.addEventListener('ended',markSeen);
+    v.addEventListener('ended',()=>{markSeen();if(renderPending){renderPending=false;render();}});
     hasVideo=true;
     const av=el('div',{class:'stage-av'},v,cfg.avatarNote?el('span',{class:'avatar-note'},'KI-Avatar'):null);
     stage=el('div',{class:'stage'+(keinBild?' nopic':'')},av,info);
