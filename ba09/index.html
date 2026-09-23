@@ -156,13 +156,13 @@ textarea.input{min-height:96px;resize:vertical}
 .stage-info.shots .shot.on{opacity:1}
 /* Gleicher Hinweis auf der blauen Flaeche, wenn noch keine Fotos vorliegen */
 .demo-band.leer{background:rgba(255,255,255,.94);color:#1B3A8C;top:auto;bottom:11%;box-shadow:0 3px 14px rgba(8,14,32,.28)}
-.demo-band.leer b{max-width:70%;font-size:13px}
+.demo-band.leer b{max-width:58%;font-size:13px}
 .stage-info.points.mit-band{padding-bottom:clamp(58px,22%,120px)}
 @media (max-width:699px){
   .stage-info.points.mit-band{padding-bottom:46px;min-height:min(62vw,320px)}
-  .stage-info.points h3{font-size:clamp(14px,3.8vw,17px)}
+  .stage-info.points h3{font-size:clamp(12px,3.1vw,16px)}
   .demo-band.leer{padding:5px 0;bottom:5%}
-  .demo-band.leer b{max-width:88%;font-size:10.5px}
+  .demo-band.leer b{max-width:66%;font-size:10.5px}
 }
 .stage-info.shots img{display:block;width:100%;height:100%;object-fit:cover;animation:zoomslow 20s ease-out both}
 .stage-info.shots figcaption{position:absolute;left:0;right:0;top:0;padding:10px 14px 22px;font-size:13px;font-weight:700;color:#fff;background:linear-gradient(rgba(10,16,32,.8),transparent)}
@@ -265,30 +265,23 @@ textarea.input{min-height:96px;resize:vertical}
 .seg-layout video{animation:vdfade .35s ease-out}
 @keyframes vdfade{from{opacity:0}to{opacity:1}}
 
-/* Große Bildschirme: Fläche nutzen, Sprecher deutlich größer (23.09.2026) */
+/* Große Bildschirme: ein Design, das als Ganzes mitwächst (23.09.2026) */
 @media (min-width:1100px){
-  .app{max-width:1360px}
-  /* Textspalte auf die volle Höhe der Bühne ziehen und mitwachsen lassen */
+  .app{max-width:1100px}
   .seg-layout{grid-template-columns:minmax(0,7.5fr) minmax(0,4.5fr);align-items:stretch}
   .seg-layout>.stack{display:flex;flex-direction:column}
-  .seg-layout>.stack>.card:first-child{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;padding:26px 28px;font-size:clamp(20px,1.7vw,26px)}
-  .seg-layout>.stack>.card:first-child>h2{font-size:1.22em;line-height:1.25;margin:0;hyphens:auto;overflow-wrap:break-word}
+  .seg-layout>.stack>.card:first-child{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;padding:22px 24px;font-size:18px}
+  .seg-layout>.stack>.card:first-child>h2{font-size:1.12em;line-height:1.25;margin:0;hyphens:auto;overflow-wrap:break-word}
   .seg-layout>.stack>.card:first-child .seg-text{font-size:1em;line-height:1.55}
-  .stage-info.points h3{font-size:clamp(22px,1.75vw,32px);hyphens:auto;overflow-wrap:break-word}
-  .stage-info.points li{font-size:clamp(14px,1.05vw,17px)}
-  .demo-band.leer b{font-size:clamp(14px,1.05vw,18px)}
-  /* Sprecherfläche füllt die Spalte mit, damit links keine weiße Fläche bleibt */
-  .seg-layout .stage{grid-template-columns:42% 1fr}
+  .stage-info.points h3{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  .stage-info.points li{font-size:13px}
+  .demo-band.leer b{font-size:13px}
+  .seg-layout .stage{grid-template-columns:38% 1fr}
   .seg-layout>.stage-wrap{height:100%}
   .seg-layout>.stage-wrap>.stage{flex:1 1 auto;min-height:0}
   .seg-layout .stage-av::before{content:"";display:block;padding-top:177.8%}
-  .seg-layout .stage-av video{position:absolute;inset:0;width:100%;height:100%}
+  .seg-layout .stage-av video,.seg-layout .stage-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 }
-@media (min-width:1600px){
-  .app{max-width:1560px}
-  .media h2{font-size:38px}
-}
-@media (min-width:2000px){.app{max-width:1800px}}
 </style>
 <div class="no-print" style="background:#1B3A8C;color:#fff;font-size:12px;padding:6px 12px;text-align:center">Musterunterweisung · Allgemeine Sicherheitsunterweisung · aktuell in Deutsch mit Avatar-Video, weitere Sprachen entstehen gemeinsam mit dem Pilotbetrieb</div>
 
@@ -677,6 +670,18 @@ const ICON={
 
 /* ═══════════════════════════ Router / Render ════════════════════════ */
 function go(screen,extra){Object.assign(S,{screen},extra||{});save();render();window.scrollTo({top:0,behavior:'instant'});}
+/* Ein Bild, das als Ganzes mitwächst: die ganze App skaliert gleichmäßig mit der Fensterbreite. */
+function seitenGroesse(){
+  const app=document.getElementById('app'), band=document.querySelector('body>.no-print');
+  if(!app) return;
+  const breite=document.documentElement.clientWidth;
+  app.style.zoom=''; if(band)band.style.zoom='';
+  if(breite<1100) return;
+  const z=Math.min(2,Math.max(1,(breite-30)/app.offsetWidth));
+  app.style.zoom=z; if(band)band.style.zoom=z;
+}
+if(!window.__vdGroesseBound){window.__vdGroesseBound=true;
+  window.addEventListener('resize',()=>{seitenGroesse();if(window.__vdFit)window.__vdFit();},{passive:true});}
 function render(){
   document.documentElement.lang=(S.lang||'de');
   document.documentElement.dir=L().dir||'ltr';
@@ -685,6 +690,7 @@ function render(){
     :`<div>${esc(cfg.customer)}</div>${S.lang?`<div>${S.lang.toUpperCase()}</div>`:''}`;
   $('#foot').innerHTML=`<div>${esc(T('footer'))}</div><div style="margin-top:6px">jetztVerstehstDu${MOD?' · '+esc(MOD.id)+' · '+esc(MOD.version):''}${S.lang&&S.lang!=='de'?' · '+esc(T('originalNote')):''}</div>`;
   ({lang:vLang,who:vWho,modules:vModules,seg:vSeg,quiz:vQuiz,quizResult:vQuizResult,sign:vSign,proof:vProof,setup:vSetup}[S.screen]||vLang)(main);
+  seitenGroesse();
 }
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -925,20 +931,31 @@ function vSeg(main){
   const abbruchBtn=el('button',{class:'btn ghost cancelbtn',onclick:()=>{abbruch.hidden=false;abbruch.scrollIntoView({block:'nearest'});}},T('cancelRun'));
   if(repIdx) main.insertBefore(el('div',{class:'draft-banner',style:'border-color:var(--accent)'},T('repeatMode',{n:repIdx.length})),main.firstChild);
   main.append(topics,prog,layout,abbruch,el('div',{style:'text-align:center'},abbruchBtn));
+  /* Textkarte und Bühne enden auf derselben Höhe: die Fußzeilen beider Spalten gleich hoch machen. */
+  const fussAusrichten=()=>{
+    const vbar=stage&&stage.vbar; if(!vbar)return;
+    vbar.style.marginBottom=''; nav.style.marginBottom='';
+    if(window.innerWidth<1100) return;
+    const stack=textCard.parentNode;
+    const rechts=[...stack.children].slice(1).reduce((sum,e)=>sum+e.offsetHeight+12,0);
+    const links=vbar.offsetHeight+8;
+    if(rechts>links) vbar.style.marginBottom=(rechts-links)+'px';
+    else if(links>rechts) nav.style.marginBottom=(links-rechts)+'px';
+  };
   /* Auf großen Bildschirmen die Schrift so groß wählen, wie der Abschnitt neben dem Sprecher Platz hat. */
   const textEinpassen=()=>{
     if(!stage||window.innerWidth<1100){textCard.style.fontSize='';return;}
-    textCard.style.fontSize='17px';
+    textCard.style.fontSize='16px';
     const platz=textCard.clientHeight; if(!platz)return;
-    let lo=17,hi=28,best=17;
-    for(let n=0;n<7;n++){const m=(lo+hi)/2;textCard.style.fontSize=m+'px';
+    let lo=16,hi=21,best=16;
+    for(let n=0;n<6;n++){const m=(lo+hi)/2;textCard.style.fontSize=m+'px';
       if(textCard.scrollHeight<=platz){best=m;lo=m;}else{hi=m;}}
     textCard.style.fontSize=best.toFixed(1)+'px';
   };
-  requestAnimationFrame(()=>requestAnimationFrame(textEinpassen));
-  window.__vdFit=textEinpassen;
-  if(!window.__vdFitBound){window.__vdFitBound=true;
-    window.addEventListener('resize',()=>{if(window.__vdFit)window.__vdFit();},{passive:true});}
+  const layoutAnpassen=()=>{seitenGroesse();fussAusrichten();textEinpassen();};
+  requestAnimationFrame(()=>requestAnimationFrame(layoutAnpassen));
+  window.__vdFit=layoutAnpassen;
+
   built=true;
   requestAnimationFrame(()=>{const a=$('.chip.active',topics);a&&a.scrollIntoView({inline:'center',block:'nearest'});});
   /* Wischgesten: links = weiter, rechts = zurück */
