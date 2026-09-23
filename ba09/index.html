@@ -142,7 +142,7 @@ textarea.input{min-height:96px;resize:vertical}
 .stage-info.shots{aspect-ratio:3/2}
 .stage-info.points{background:linear-gradient(160deg,#1B3A8C,#142C6B);color:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:8px;justify-content:center;min-height:min(56vw,300px)}
 .stage-info.points .num{font-size:11px;font-weight:700;letter-spacing:.1em;opacity:.85}
-.stage-info.points h3{margin:0;font-size:17px;line-height:1.25;color:#fff;text-wrap:balance}
+.stage-info.points h3{margin:0;font-size:17px;line-height:1.25;color:#fff;text-wrap:balance;hyphens:auto;overflow-wrap:break-word}
 .stage-info.points ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:5px}
 .stage-info.points li{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:3px 9px;font-size:12px;font-weight:600}
 [dir="rtl"] .stage-av{left:auto;right:10px}
@@ -154,6 +154,16 @@ textarea.input{min-height:96px;resize:vertical}
 .demo-band b{display:block;max-width:58%;margin:0 auto;font-size:12.5px;font-weight:700;line-height:1.35;text-wrap:balance}
 @media (min-width:700px){.demo-band{padding:11px 0}.demo-band b{font-size:15px}}
 .stage-info.shots .shot.on{opacity:1}
+/* Gleicher Hinweis auf der blauen Flaeche, wenn noch keine Fotos vorliegen */
+.demo-band.leer{background:rgba(255,255,255,.94);color:#1B3A8C;top:auto;bottom:11%;box-shadow:0 3px 14px rgba(8,14,32,.28)}
+.demo-band.leer b{max-width:70%;font-size:13px}
+.stage-info.points.mit-band{padding-bottom:clamp(58px,22%,120px)}
+@media (max-width:699px){
+  .stage-info.points.mit-band{padding-bottom:46px;min-height:min(62vw,320px)}
+  .stage-info.points h3{font-size:clamp(14px,3.8vw,17px)}
+  .demo-band.leer{padding:5px 0;bottom:5%}
+  .demo-band.leer b{max-width:88%;font-size:10.5px}
+}
 .stage-info.shots img{display:block;width:100%;height:100%;object-fit:cover;animation:zoomslow 20s ease-out both}
 .stage-info.shots figcaption{position:absolute;left:0;right:0;top:0;padding:10px 14px 22px;font-size:13px;font-weight:700;color:#fff;background:linear-gradient(rgba(10,16,32,.8),transparent)}
 @keyframes zoomslow{from{transform:scale(1)}to{transform:scale(1.09)}}
@@ -258,14 +268,27 @@ textarea.input{min-height:96px;resize:vertical}
 /* Große Bildschirme: Fläche nutzen, Sprecher deutlich größer (23.09.2026) */
 @media (min-width:1100px){
   .app{max-width:1360px}
-  .seg-layout{grid-template-columns:minmax(0,8fr) minmax(0,4fr)}
-  .seg-text{font-size:20px}
+  /* Textspalte auf die volle Höhe der Bühne ziehen und mitwachsen lassen */
+  .seg-layout{grid-template-columns:minmax(0,7.5fr) minmax(0,4.5fr);align-items:stretch}
+  .seg-layout>.stack{display:flex;flex-direction:column}
+  .seg-layout>.stack>.card:first-child{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;padding:26px 28px;font-size:clamp(20px,1.7vw,26px)}
+  .seg-layout>.stack>.card:first-child>h2{font-size:1.22em;line-height:1.25;margin:0;hyphens:auto;overflow-wrap:break-word}
+  .seg-layout>.stack>.card:first-child .seg-text{font-size:1em;line-height:1.55}
+  .stage-info.points h3{font-size:clamp(22px,1.75vw,32px);hyphens:auto;overflow-wrap:break-word}
+  .stage-info.points li{font-size:clamp(14px,1.05vw,17px)}
+  .demo-band.leer b{font-size:clamp(14px,1.05vw,18px)}
+  /* Sprecherfläche füllt die Spalte mit, damit links keine weiße Fläche bleibt */
+  .seg-layout .stage{grid-template-columns:42% 1fr}
+  .seg-layout>.stage-wrap{height:100%}
+  .seg-layout>.stage-wrap>.stage{flex:1 1 auto;min-height:0}
+  .seg-layout .stage-av::before{content:"";display:block;padding-top:177.8%}
+  .seg-layout .stage-av video{position:absolute;inset:0;width:100%;height:100%}
 }
 @media (min-width:1600px){
   .app{max-width:1560px}
   .media h2{font-size:38px}
-  .seg-text{font-size:21px}
 }
+@media (min-width:2000px){.app{max-width:1800px}}
 </style>
 <div class="no-print" style="background:#1B3A8C;color:#fff;font-size:12px;padding:6px 12px;text-align:center">Musterunterweisung · Allgemeine Sicherheitsunterweisung · aktuell in Deutsch mit Avatar-Video, weitere Sprachen entstehen gemeinsam mit dem Pilotbetrieb</div>
 
@@ -398,6 +421,7 @@ window.VD_MODULES.ASU01 = {
         sendNoEndpointHint: "Solange senden Sie den Nachweis von Hand.",
         wipeBlocked: "Der Nachweis ist noch unterwegs. Die Daten bleiben so lange erhalten.",
         demoImages: "Beispielbild · hier stehen später Ihre eigenen Fotos",
+        demoEigene: "Hier könnten Ihre Bilder aus dem Unternehmen stehen",
         wrongWillRepeat: "Diesen Abschnitt sehen Sie gleich noch einmal. Danach kommt die Frage erneut.",
         videoMissing: "Video folgt. Der Text steht vollständig unten.",
         videoMissingHint: "Bitte lesen Sie den Text unten aufmerksam durch. Der Abschnitt wird danach freigegeben.",
@@ -778,6 +802,9 @@ function vSeg(main){
       info.classList.add('points'); keinBild=true;
       info.append(el('div',{class:'num'},seg.id===segs[0].id?T('intro'):T('segmentOf',{n:i,total:SEG_COUNT})),
                   el('h3',{},seg.title), el('ul',{},seg.sub.map(x=>el('li',{},x))));
+      /* Hinweis auf der freien blauen Flaeche: hier stehen spaeter die Bilder des Betriebs. */
+      if(cfg.demoBilder!==false){info.classList.add('mit-band');
+        info.append(el('div',{class:'demo-band leer'},el('b',{},T('demoEigene'))));}
     }
     v.addEventListener('error',()=>{hasVideo=false;
       S.videoFail=S.videoFail||{};S.videoFail[seg.id]=true;save();
@@ -828,7 +855,7 @@ function vSeg(main){
   } else {renderCard(media,seg,i);media.append(el('div',{style:'margin-top:12px;color:var(--accent);font-size:13px;font-weight:600'},({en:'Avatar video in this language: available in the pilot',fr:'Vidéo avec avatar dans cette langue : disponible dans le pilote'})[S.lang]||'Video mit Avatar in dieser Sprache: im Pilot'));markSeen();}
   /* Text + Aktionen */
   const qBox=el('div',{class:'q-box',hidden:true});
-  const qBtn=el('button',{class:'btn ghost qbtn',onclick:()=>{qBox.hidden=!qBox.hidden;if(!qBox.hidden)$('textarea',qBox).focus();}},el('span',{html:ICON.q}),T('haveQuestion'));
+  const qBtn=el('button',{class:'btn ghost qbtn',onclick:()=>{qBox.hidden=!qBox.hidden;if(window.__vdFit)window.__vdFit();if(!qBox.hidden)$('textarea',qBox).focus();}},el('span',{html:ICON.q}),T('haveQuestion'));
   const ta=el('textarea',{class:'input',placeholder:T('questionPlaceholder')});
   /* Zwei Arten von Rückmeldung: Verständnisfrage an die Führungskraft, Sachhinweis an die Dokumentenpflege */
   let qKind='verstaendnis';
@@ -859,7 +886,7 @@ function vSeg(main){
         S.questions.push({seg:seg.id,text:t,kind:qKind,at:new Date().toISOString()});save();
         ta.value='';qBox.hidden=true;
         toast(cfg.responsible?T('questionSavedTo',{name:cfg.responsible}):T('questionSaved'));render();}},T('saveQuestion')),
-      el('button',{class:'btn ghost',onclick:()=>{qBox.hidden=true;}},T('cancel'))));
+      el('button',{class:'btn ghost',onclick:()=>{qBox.hidden=true;if(window.__vdFit)window.__vdFit();}},T('cancel'))));
   const myQs=S.questions.filter(q=>q.seg===seg.id);
   const kindLabel=q=>T(q.kind==='inhalt'?'qKindErrorShort':'qKindUnderstandShort');
   const textWrap=el('div',{class:'seg-text'},el('p',{},seg.text));
@@ -898,6 +925,20 @@ function vSeg(main){
   const abbruchBtn=el('button',{class:'btn ghost cancelbtn',onclick:()=>{abbruch.hidden=false;abbruch.scrollIntoView({block:'nearest'});}},T('cancelRun'));
   if(repIdx) main.insertBefore(el('div',{class:'draft-banner',style:'border-color:var(--accent)'},T('repeatMode',{n:repIdx.length})),main.firstChild);
   main.append(topics,prog,layout,abbruch,el('div',{style:'text-align:center'},abbruchBtn));
+  /* Auf großen Bildschirmen die Schrift so groß wählen, wie der Abschnitt neben dem Sprecher Platz hat. */
+  const textEinpassen=()=>{
+    if(!stage||window.innerWidth<1100){textCard.style.fontSize='';return;}
+    textCard.style.fontSize='17px';
+    const platz=textCard.clientHeight; if(!platz)return;
+    let lo=17,hi=28,best=17;
+    for(let n=0;n<7;n++){const m=(lo+hi)/2;textCard.style.fontSize=m+'px';
+      if(textCard.scrollHeight<=platz){best=m;lo=m;}else{hi=m;}}
+    textCard.style.fontSize=best.toFixed(1)+'px';
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(textEinpassen));
+  window.__vdFit=textEinpassen;
+  if(!window.__vdFitBound){window.__vdFitBound=true;
+    window.addEventListener('resize',()=>{if(window.__vdFit)window.__vdFit();},{passive:true});}
   built=true;
   requestAnimationFrame(()=>{const a=$('.chip.active',topics);a&&a.scrollIntoView({inline:'center',block:'nearest'});});
   /* Wischgesten: links = weiter, rechts = zurück */
