@@ -343,7 +343,7 @@ window.VD_MODULES.ASU01 = {
         segmentOf: "Abschnitt {n} von {total}",
         toQuiz: "Zum Wissenscheck",
         quizTitle: "Wissenscheck",
-        quizIntro: "Fünf Fragen, je eine richtige Antwort. Bei einer falschen Antwort sehen Sie den Abschnitt noch einmal und beantworten danach eine weitere Frage dazu.",
+        quizIntro: "Zu jeder Frage gibt es eine richtige Antwort. Bei einer falschen Antwort sehen Sie den Abschnitt noch einmal und beantworten danach eine weitere Frage dazu.",
         quizStart: "Wissenscheck starten",
         questionOf: "Frage {n}",
         correctSoFar: "{n} von {total} richtig",
@@ -356,7 +356,7 @@ window.VD_MODULES.ASU01 = {
         right: "Richtig.",
         wrong: "Diese Antwort passt noch nicht.",
         passed: "Wissenscheck bestanden",
-        passedText: "Sie haben alle drei Fragen richtig beantwortet.",
+        passedText: "Sie haben alle Fragen richtig beantwortet.",
         failed: "Bitte Abschnitte wiederholen",
         failedText: "Wiederholen Sie die markierten Abschnitte. Danach steht der Wissenscheck erneut bereit.",
         repeatSegments: "Abschnitte wiederholen",
@@ -560,7 +560,7 @@ window.VD_MODULES.ASU01 = {
 'use strict';
 /* ═══════════════════════════ Konfiguration ═══════════════════════════ */
 const CFG_KEY='vd_config_v1', STATE_KEY='vd_state_v1';
-const DEFAULT_CFG={zweiterVersuch:false, customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
+const DEFAULT_CFG={konfetti:true, klang:true, zweiterVersuch:false, customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
 let cfg=loadJSON(CFG_KEY,{});
 cfg=Object.assign({},DEFAULT_CFG,cfg);
 /* URL-Parameter (z. B. per QR-Code): ?kunde=Firma&mail=arbeitsschutz@firma.de&lang=de&video=https://… */
@@ -1072,9 +1072,64 @@ function vQuiz(main){
   if(done()) showResult();   /* Stand nach einem Neuladen wiederherstellen */
 }
 function finishQuiz(){const q=S.quiz;q.done=true;q.passed=q.asked.length>0&&q.asked.every(a=>a.correct===true);if(q.passed)S.retryGroups=null;save();go('quizResult');}
+/* Kleiner Moment beim Bestehen: Konfetti und ein kurzer Klang, beides abschaltbar. */
+function feiern(){
+  const leise=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(cfg.konfetti!==false && !leise) konfettiRegen();
+  if(cfg.klang!==false) kurzerKlang();
+}
+function konfettiRegen(){
+  const cv=document.createElement('canvas');
+  cv.setAttribute('aria-hidden','true');
+  cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60';
+  document.body.appendChild(cv);
+  const g=cv.getContext('2d'), dpr=Math.min(2,window.devicePixelRatio||1);
+  const setze=()=>{cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;g.setTransform(dpr,0,0,dpr,0,0);};
+  setze();
+  const farben=['#1B3A8C','#3E66D4','#F2B705','#2E9E6B','#E86A33','#ffffff'];
+  const teile=[];
+  for(let n=0;n<110;n++) teile.push({
+    x:Math.random()*innerWidth, y:-20-Math.random()*innerHeight*0.5,
+    b:6+Math.random()*7, h:9+Math.random()*9,
+    f:farben[n%farben.length], v:2.2+Math.random()*2.8,
+    s:(Math.random()-0.5)*1.6, w:Math.random()*Math.PI, d:(Math.random()-0.5)*0.22});
+  const start=performance.now(), dauer=3400;
+  (function lauf(t){
+    const alter=t-start;
+    g.clearRect(0,0,innerWidth,innerHeight);
+    const sicht=Math.max(0,Math.min(1,(dauer-alter)/700));
+    g.globalAlpha=sicht;
+    for(const p of teile){
+      p.y+=p.v; p.x+=p.s; p.w+=p.d;
+      if(p.y>innerHeight+30){p.y=-20;p.x=Math.random()*innerWidth;}
+      g.save(); g.translate(p.x,p.y); g.rotate(p.w);
+      g.fillStyle=p.f; g.fillRect(-p.b/2,-p.h/2,p.b,p.h*Math.abs(Math.cos(p.w)));
+      g.restore();
+    }
+    if(alter<dauer) requestAnimationFrame(lauf); else cv.remove();
+  })(start);
+}
+function kurzerKlang(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    const ac=new AC(); const jetzt=ac.currentTime;
+    const noten=[[523.25,0],[659.25,0.13],[783.99,0.26],[1046.5,0.40]];
+    noten.forEach(([hz,ab],i)=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='triangle'; o.frequency.value=hz;
+      const t0=jetzt+ab, t1=t0+(i===noten.length-1?0.55:0.22);
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(0.16,t0+0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001,t1);
+      o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t1+0.05);
+    });
+    setTimeout(()=>{try{ac.close();}catch(e){}},1600);
+  }catch(e){}
+}
 function vQuizResult(main){
   const q=S.quiz;
   if(q.passed){
+    requestAnimationFrame(()=>feiern());
     main.append(el('div',{class:'card result-hero ok'},el('div',{class:'mark'},'✓'),el('h1',{},T('passed')),el('p',{class:'muted'},T('passedText')),
       el('button',{class:'btn big block',onclick:()=>go('sign')},T('toSign'),el('span',{html:ICON.next}))));
   }else{
