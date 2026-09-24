@@ -134,6 +134,10 @@ textarea.input{min-height:96px;resize:vertical}
 .stage{display:grid;grid-template-columns:34% 1fr;gap:10px;padding:10px;border-radius:var(--radius);box-shadow:var(--shadow);background:var(--surface);touch-action:pan-y}
 .stage-av{position:relative;overflow:hidden;background:#111;border-radius:10px}
 .stage-av video{display:block;width:100%;height:100%;object-fit:cover;object-position:center 28%;background:#111}
+.stage-av .laden{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(10,16,32,.62);color:#fff;font-size:13px;font-weight:600;text-align:center;padding:10px}
+.stage-av .laden i{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;animation:vdreh .9s linear infinite}
+@keyframes vdreh{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.stage-av .laden i{animation:none}}
 .stage-av .avatar-note{position:absolute;left:5px;bottom:5px;font-size:9px;font-weight:700;letter-spacing:.04em;color:#fff;background:rgba(27,58,140,.9);padding:2px 5px;border-radius:3px}
 .stage-info{position:relative;overflow:hidden;background:var(--surface);border-radius:10px}
 .videofehler{grid-column:1/-1;padding:22px 18px;text-align:center;color:var(--text);background:var(--surface);border:1px dashed var(--line);border-radius:10px}
@@ -415,6 +419,7 @@ window.VD_MODULES.ASU01 = {
         wipeBlocked: "Der Nachweis ist noch unterwegs. Die Daten bleiben so lange erhalten.",
         demoImages: "Beispielbild · hier stehen später Ihre eigenen Fotos",
         demoEigene: "Hier könnten Ihre Bilder aus dem Unternehmen stehen",
+        ladeHinweis: "Video wird geladen",
         wrongWillRepeat: "Diesen Abschnitt sehen Sie gleich noch einmal. Danach kommt die Frage erneut.",
         videoMissing: "Video folgt. Der Text steht vollständig unten.",
         videoMissingHint: "Bitte lesen Sie den Text unten aufmerksam durch. Der Abschnitt wird danach freigegeben.",
@@ -794,7 +799,7 @@ function vSeg(main){
   const imgs=(MOD.images&&MOD.images[seg.id])||[];
   let hasVideo=false, stage=null;
   if(videoUrl){
-    const v=el('video',{playsinline:true,preload:'metadata',src:videoUrl});curVideo=v;
+    const v=el('video',{playsinline:true,preload:'auto',src:videoUrl});curVideo=v;
     /* Rechte Fläche: Bilder wechseln im Takt des Videos, sonst stehen dort die Merkpunkte. */
     const info=el('div',{class:'stage-info'});
     let shots=[], keinBild=false;
@@ -851,6 +856,26 @@ function vSeg(main){
       const ziel=v.duration*Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
       if(ziel>v.currentTime+1&&!S.seen[seg.id]){toast(T('noSkip'));return;}
       v.currentTime=ziel;};
+    /* Ladeanzeige: das Video startet erst, wenn genug im Puffer liegt. */
+    const ladeBox=el('div',{class:'laden'},el('i',{}),el('span',{},T('ladeHinweis')));
+    av.append(ladeBox);
+    const ladenZeigen=an=>{ladeBox.hidden=!an;};
+    ladenZeigen(v.readyState<3);
+    ['canplay','canplaythrough','playing'].forEach(e=>v.addEventListener(e,()=>ladenZeigen(false)));
+    ['waiting','stalled'].forEach(e=>v.addEventListener(e,()=>{if(!v.paused)ladenZeigen(true);}));
+    v.addEventListener('seeking',()=>{if(v.readyState<3)ladenZeigen(true);});
+    /* Den nächsten Abschnitt im Hintergrund vorladen, damit der Start sofort kommt. */
+    v.addEventListener('canplaythrough',()=>{
+      const nSeg=segs[i+1];
+      if(!nSeg)return;
+      const nKey=`${MOD.id}_${nSeg.id}_${S.lang.toUpperCase()}`;
+      const nUrl=(window.VD_VIDEOS&&window.VD_VIDEOS[nKey])?window.VD_VIDEOS[nKey]
+                :(cfg.videoBase&&L().hasVideo)?`${cfg.videoBase.replace(/\/$/,'')}/${nKey}.mp4`:null;
+      if(!nUrl||window.__vdVorab===nUrl)return;
+      window.__vdVorab=nUrl;
+      const vv=document.createElement('video');vv.preload='auto';vv.muted=true;vv.src=nUrl;
+      window.__vdVorabEl=vv;
+    },{once:true});
     v.addEventListener('play',()=>{playBtn.replaceChildren(el('span',{html:ICON.pause}));playBtn.classList.add('on');});
     v.addEventListener('pause',()=>{playBtn.replaceChildren(el('span',{html:ICON.play}));playBtn.classList.remove('on');});
     v.addEventListener('timeupdate',()=>{if(!v.duration)return;$('.vfill',track).style.width=(v.currentTime/v.duration*100)+'%';time.textContent=fmt(v.currentTime)+' / '+fmt(v.duration);});
