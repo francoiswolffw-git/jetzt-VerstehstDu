@@ -337,7 +337,7 @@ window.VD_MODULES.ASU01 = {
         personnelHint: "Falls vorhanden. Erleichtert die Zuordnung.",
         department: "Bereich / Abteilung",
         optional: "optional",
-        privacy: "Ihre Angaben bleiben auf diesem Gerät und gehen ausschließlich als Nachweis an Ihren Arbeitgeber. jetztVerstehstDu speichert keine Daten.",
+        privacy: "Dies ist eine Vorführung. Ihre Angaben gehen als Beispielnachweis an jetztVerstehstDu, auf Wunsch schicken wir Ihnen den fertigen Nachweis zu. Nach 30 Tagen wird er gelöscht. Für den Test genügen Ihr Name und Ihre Firma, Personalnummer und Abteilung können Sie freilassen. Details: jetztverstehstdu.de/datenschutz.html",
         consent: "Ich habe den Hinweis gelesen.",
         required: "Bitte ausfüllen.",
         segmentOf: "Abschnitt {n} von {total}",
@@ -747,7 +747,7 @@ function vWho(main){
         if(!consent.checked)ok=false;
         err.hidden=ok;err.textContent=T('required');if(!ok)return;
         S.person={first:v('first'),last:v('last'),pnr:v('pnr'),dept:v('dept'),company:v('company')};
-        cfg.customer=v('company');saveJSON(CFG_KEY,cfg);
+        cfg.customer=v('company');
         S.segIdx=0;S.seen={};S.questions=[];S.quiz=null;S.proof=null;S.doneModules=S.doneModules||{};
         go('modules');
       }},T('start'),el('span',{html:ICON.next}))));
@@ -1174,7 +1174,7 @@ async function createProof(sigData){
   /* Erste Runde ist die Diagnose, spätere Runden belegen die Nachschulung. */
   const alleFragen=(S.quizLog||[]).concat(S.quiz.asked.map(a=>({id:a.id,correct:a.correct,runde:S.quiz.retry?2:1})));
   const runde1=alleFragen.filter(f=>f.runde===1);
-  const rec={id,customer:cfg.customer,module:MOD.id,moduleTitle:MOD.titleDE,docNo:MOD.docNo,docVersion:MOD.version,lang:S.lang,langName:L().nameDE||L().name,langDraft:!L().checked,
+  const rec={id,customer:(S.person&&S.person.company)||cfg.customer,module:MOD.id,moduleTitle:MOD.titleDE,docNo:MOD.docNo,docVersion:MOD.version,lang:S.lang,langName:L().nameDE||L().name,langDraft:!L().checked,
     person:S.person,startedAt:new Date(S.startedAt).toISOString(),finishedAt:now.toISOString(),durationMs:now-S.startedAt,
     segmentsSeen:Object.keys(S.seen),videoFailed:Object.keys(S.videoFail||{}),questionsAsked:alleFragen,correct:runde1.filter(f=>f.correct).length,asked:runde1.length,
     retrained:[...new Set(alleFragen.filter(f=>!f.correct).map(f=>MOD.groupSegment[f.id.split('-')[0]]).filter(Boolean))],
