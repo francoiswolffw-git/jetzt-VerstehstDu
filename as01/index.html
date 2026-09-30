@@ -231,7 +231,7 @@ textarea.input{min-height:96px;resize:vertical}
 
 /* ── Unterschrift ────────────────────────────────────────────────────── */
 .sigwrap{position:relative;border:2px dashed var(--line);border-radius:var(--radius-sm);background:#fff;overflow:hidden;touch-action:none}
-.sigwrap canvas{display:block;width:100%;height:200px}
+.sigwrap canvas{display:block;width:100%;height:200px;touch-action:none}
 .sigwrap .placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#8a93a6;pointer-events:none;font-size:14px}
 .sigwrap .baseline{position:absolute;left:24px;right:24px;bottom:44px;border-top:1px solid #c9cfdb;pointer-events:none}
 
@@ -1030,11 +1030,12 @@ function vQuiz(main){
   const answers=el('div',{class:'answers'});
   const fb=el('div',{class:'feedback',hidden:true});
   const nextBtn=el('button',{class:'btn big block',hidden:true,onclick:()=>{q.pos++;save();if(q.pos>=q.queue.length)finishQuiz();else go('quiz');}},T('next'),el('span',{html:ICON.next}));
-  const done=()=>a.chosen!=null&&(a.correct===true||a.tries2===true);
+  const zweiterVersuchAn=cfg.zweiterVersuch===true;
+  const done=()=>a.chosen!=null&&(a.correct===true||a.tries2===true||!zweiterVersuchAn);
   let picked=done()?null:a.chosen;const btns=[];
   a.order.forEach((ansIdx,k)=>{
     const b=el('button',{class:'answer',onclick:()=>{
-      if(a.correct===true||a.tries2)return;                 /* abgeschlossen */
+      if(done())return;                                      /* abgeschlossen */
       if(a.chosen!=null&&ansIdx===a.chosen)return;           /* schon als falsch markiert */
       picked=ansIdx;btns.forEach(x=>{if(!x.classList.contains('wrongpick'))x.classList.remove('selected');});b.classList.add('selected');checkBtn.disabled=false;}},
       el('span',{class:'k'},['A','B','C'][k]),el('span',{},def.a[ansIdx]));
@@ -1060,7 +1061,7 @@ function vQuiz(main){
   };
   const checkBtn=el('button',{class:'btn big block',disabled:true,onclick:()=>{
     if(picked==null)return;
-    if(a.chosen!=null && a.correct===false && !a.tries2){ /* zweiter Versuch */
+    if(zweiterVersuchAn && a.chosen!=null && a.correct===false && !a.tries2){ /* zweiter Versuch */
       a.chosen1=a.chosen; a.tries2=true; a.chosen=picked; a.correct=picked===0; a.secondTry=a.correct;
     } else if(a.chosen==null){
       a.chosen=picked; a.correct=picked===0;
@@ -1149,9 +1150,12 @@ function vSign(main){
   const ph=el('div',{class:'placeholder'},T('signHere'));
   const wrap=el('div',{class:'sigwrap'},cv,el('div',{class:'baseline'}),ph);
   let drawn=false,ctx,drawing=false,lastPt=null;
-  const setup=()=>{const r=wrap.getBoundingClientRect();const dpr=window.devicePixelRatio||1;cv.width=Math.round(r.width*dpr);cv.height=Math.round(200*dpr);ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2.4;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';};
-  const pt=e=>{const r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
-  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);drawing=true;lastPt=pt(e);ph.hidden=true;});
+  /* Zeichenfläche misst die Leinwand selbst und rechnet jeden Punkt über das tatsächliche Verhältnis von Bitmap zu Anzeige um.
+     So stimmt der Strich auch bei Randbreite, Bildlaufleiste, Zoom oder Fensteränderung mit dem Finger überein (Befund Touch-Laptop 28.09.2026). */
+  const setup=()=>{const r=cv.getBoundingClientRect();if(!r.width||!r.height)return;const dpr=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));ctx=cv.getContext('2d');ctx.lineWidth=2.4*dpr;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';};
+  if(window.ResizeObserver){new ResizeObserver(()=>{if(!drawn)setup();}).observe(cv);}
+  const pt=e=>{const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};};
+  cv.addEventListener('pointerdown',e=>{if(!ctx)setup();e.preventDefault();cv.setPointerCapture(e.pointerId);drawing=true;lastPt=pt(e);ph.hidden=true;});
   cv.addEventListener('pointermove',e=>{if(!drawing)return;const p=pt(e);ctx.beginPath();ctx.moveTo(lastPt.x,lastPt.y);ctx.lineTo(p.x,p.y);ctx.stroke();lastPt=p;drawn=true;});
   const end=()=>{drawing=false;lastPt=null;};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);cv.addEventListener('pointerleave',end);
   const err=el('div',{class:'err',hidden:true},T('needSignature'));
