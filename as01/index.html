@@ -481,6 +481,11 @@ window.VD_MODULES.ASU01 = {
         prueferHint: "Wer begleitet die Unterweisung und beantwortet Rückfragen?",
         prueferChoose: "Bitte auswählen",
         prueferAllein: "Allein am eigenen Gerät durchgeführt",
+        exampleLangsTitle: "Beispiel: So erscheinen später die Sprachen Ihres Betriebs",
+        exampleLangNote: "Beispiel · entsteht im Pilot",
+        exampleLangToast: "{sprache} richten wir im Pilot für Ihren Betrieb ein. Die Musterunterweisung läuft auf Deutsch.",
+        exampleModsTitle: "Beispiel: So erscheinen später Ihre eigenen Unterweisungen",
+        exampleModNote: "Beispiel · Ihre Unterweisung, Ihre Bilder, Ihre Sprachen",
         repeatMode: "Wiederholung: {n} Abschnitt(e), danach folgt der Wissenscheck erneut."
       },
       segments: [
@@ -568,7 +573,7 @@ window.VD_MODULES.ASU01 = {
 'use strict';
 /* ═══════════════════════════ Konfiguration ═══════════════════════════ */
 const CFG_KEY='vd_config_v1', STATE_KEY='vd_state_v1';
-const DEFAULT_CFG={konfetti:true, klang:true, einVersuch:false, pruefer:'Frau Muster (Lagerleitung, Beispiel); Herr Beispiel (Fachkraft für Arbeitssicherheit, Beispiel)', customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'../ba09/videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
+const DEFAULT_CFG={konfetti:true, klang:true, einVersuch:false, beispiele:true, pruefer:'Frau Muster (Lagerleitung, Beispiel); Herr Beispiel (Fachkraft für Arbeitssicherheit, Beispiel)', customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'../ba09/videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
 let cfg=loadJSON(CFG_KEY,{});
 cfg=Object.assign({},DEFAULT_CFG,cfg);
 if(cfg.videoBase==='videos')cfg.videoBase='../ba09/videos'; /* AS01 nutzt die Videos aus /ba09/videos */
@@ -637,9 +642,10 @@ if(!cfg.pinHash){
   if(qp.get('mail')) cfg.mail=qp.get('mail');
   if(qp.get('video')) cfg.videoBase=qp.get('video');
   if(qp.get('pruefer')) cfg.pruefer=qp.get('pruefer');
+  if(qp.has('beispiele')) cfg.beispiele=qp.get('beispiele')!=='0';
   if(qp.get('langs')) cfg.langs=qp.get('langs').split(',').map(s=>s.trim()).filter(k=>LANGS[k]);
   if(!cfg.langs.length) cfg.langs=['de'];
-  if(['kunde','mail','video','langs','pruefer'].some(k=>qp.has(k))) saveJSON(CFG_KEY,cfg);
+  if(['kunde','mail','video','langs','pruefer','beispiele'].some(k=>qp.has(k))) saveJSON(CFG_KEY,cfg);
 }
 
 /* ═══════════════════════════ Zustand ════════════════════════════════ */
@@ -717,6 +723,8 @@ function render(){
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* ── 1 Sprachwahl ─────────────────────────────────────────────────────── */
+const BEISPIEL_SPRACHEN=[{code:'pl',name:'Polski',de:'Polnisch'},{code:'zh',name:'中文',de:'Chinesisch'},{code:'en',name:'English',de:'Englisch'},{code:'ro',name:'Română',de:'Rumänisch'}];
+const BEISPIEL_MODULE=['Flurförderzeuge und Gabelstapler','Gefahrstoffe im Lager','Ladungssicherung und Verladung'];
 function vLang(main){
   const hero=el('div',{class:'hero'},
     el('div',{class:'kicker'},'jetztVerstehstDu'),
@@ -729,6 +737,17 @@ function vLang(main){
     list.append(el('button',{class:'lang-btn'+(l.checked?'':' draft'),lang:k,dir:l.dir,onclick:()=>{S.lang=k;S.startedAt=S.startedAt||Date.now();go(S.person?'modules':'who');}},
       el('span',{},el('span',{},l.name),l.checked?null:el('span',{class:'draft-note'},l.draftNoteLocal||l.draftNote||''),l.hasVideo?el('span',{style:'color:var(--accent);font-size:12px;font-weight:600;display:block;margin-top:2px'},'Mit Avatar-Video'):el('span',{style:'color:var(--accent);font-size:12px;font-weight:600;display:block;margin-top:2px'},'Textfassung · Avatar-Video im Pilot')),
       el('span',{class:'code'},k.toUpperCase())));
+  }
+  /* Vorführung: Beispielsprachen zeigen, wie die Sprachen des Betriebs später erscheinen (Wunsch François 01.10.2026).
+     Abschaltbar mit ?beispiele=0 oder cfg.beispiele=false. */
+  if(cfg.beispiele!==false){
+    list.append(el('div',{class:'small muted',style:'margin:10px 2px 0;font-weight:600'},T('exampleLangsTitle')));
+    for(const b of BEISPIEL_SPRACHEN){
+      if(langs.includes(b.code)) continue;
+      list.append(el('button',{class:'lang-btn draft',lang:b.code,onclick:()=>toast(T('exampleLangToast',{sprache:b.de}))},
+        el('span',{},el('span',{},b.name),el('span',{class:'draft-note'},T('exampleLangNote'))),
+        el('span',{class:'code'},b.code.toUpperCase())));
+    }
   }
   const card=el('div',{class:'card stack'},list);
   main.append(hero,card);
@@ -797,6 +816,11 @@ function vModules(main){
     el('h1',{},T('modTitle')),
     el('p',{class:'muted'},T('modIntro',{n:MOD_IDS.length,offen:offen})),
     list,
+    cfg.beispiele!==false?el('div',{class:'mod-list'},
+      el('div',{class:'small muted',style:'margin:6px 2px 0;font-weight:600'},T('exampleModsTitle')),
+      BEISPIEL_MODULE.map((t,n)=>el('button',{class:'mod-btn',disabled:true},
+        el('span',{class:'mod-state'},String(MOD_IDS.length+n+1)),
+        el('span',{class:'mod-txt'},el('b',{},t),el('span',{class:'mod-sub'},T('exampleModNote')))))):null,
     el('div',{class:'row between',style:'margin-top:4px'},
       el('button',{class:'btn ghost',onclick:()=>go('lang')},el('span',{html:ICON.back}),T('back')),
       el('span',{class:'small muted'},S.person?S.person.first+' '+S.person.last:''))));
