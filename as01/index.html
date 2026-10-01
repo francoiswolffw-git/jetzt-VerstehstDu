@@ -343,7 +343,7 @@ window.VD_MODULES.ASU01 = {
         segmentOf: "Abschnitt {n} von {total}",
         toQuiz: "Zum Wissenscheck",
         quizTitle: "Wissenscheck",
-        quizIntro: "Zu jeder Frage gibt es eine richtige Antwort. Bei einer falschen Antwort sehen Sie den Abschnitt noch einmal und beantworten danach eine weitere Frage dazu.",
+        quizIntro: "Zu jeder Frage gibt es eine richtige Antwort. Passt Ihre erste Wahl noch nicht, haben Sie einen zweiten Versuch. Danach sehen Sie die richtige Antwort. Den Abschnitt dazu sehen Sie am Ende noch einmal und beantworten eine weitere Frage dazu.",
         quizStart: "Wissenscheck starten",
         questionOf: "Frage {n}",
         correctSoFar: "{n} von {total} richtig",
@@ -473,6 +473,14 @@ window.VD_MODULES.ASU01 = {
         tryAgainHint: "Sehen Sie sich die zwei übrigen Antworten an und wählen Sie noch einmal.",
         secondRight: "Im zweiten Versuch richtig beantwortet.",
         secondRightShort: "2. Versuch richtig",
+        secondRightTitle: "Richtig, im zweiten Versuch.",
+        secondWrongTitle: "Auch diese Antwort passt noch nicht.",
+        correctIs: "Richtig ist die grün markierte Antwort:",
+        repeatAtEnd: "Den Abschnitt dazu sehen Sie am Ende noch einmal und beantworten eine weitere Frage.",
+        prueferLabel: "Unterweisende Person vor Ort",
+        prueferHint: "Wer begleitet die Unterweisung und beantwortet Rückfragen?",
+        prueferChoose: "Bitte auswählen",
+        prueferAllein: "Allein am eigenen Gerät durchgeführt",
         repeatMode: "Wiederholung: {n} Abschnitt(e), danach folgt der Wissenscheck erneut."
       },
       segments: [
@@ -534,7 +542,7 @@ window.VD_MODULES.ASU01 = {
             a: ["Ich verlasse das Gebäude auf direktem Weg über den Fluchtweg und gehe zum Sammelplatz.",
                 "Ich hole noch schnell meine Sachen und gehe dann hinaus.",
                 "Ich nehme den Aufzug nach unten, weil das schneller geht."] },
-          { id: "P4-V2", q: "Sie stehen am Sammelplatz. Was tun Sie als Nächstes?",
+          { id: "P4-V2", q: "Nach einem Alarm haben Sie das Gebäude verlassen und stehen am Sammelplatz. Was tun Sie als Nächstes?",
             a: ["Ich bleibe dort, bis ich eine Freigabe bekomme.",
                 "Ich gehe zurück ins Gebäude, sobald der Alarm aufhört.",
                 "Ich fahre nach Hause, weil der Arbeitstag damit beendet ist."] }
@@ -560,7 +568,7 @@ window.VD_MODULES.ASU01 = {
 'use strict';
 /* ═══════════════════════════ Konfiguration ═══════════════════════════ */
 const CFG_KEY='vd_config_v1', STATE_KEY='vd_state_v1';
-const DEFAULT_CFG={konfetti:true, klang:true, zweiterVersuch:false, customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'../ba09/videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
+const DEFAULT_CFG={konfetti:true, klang:true, einVersuch:false, pruefer:'Frau Muster (Lagerleitung, Beispiel); Herr Beispiel (Fachkraft für Arbeitssicherheit, Beispiel)', customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'../ba09/videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
 let cfg=loadJSON(CFG_KEY,{});
 cfg=Object.assign({},DEFAULT_CFG,cfg);
 if(cfg.videoBase==='videos')cfg.videoBase='../ba09/videos'; /* AS01 nutzt die Videos aus /ba09/videos */
@@ -575,6 +583,13 @@ const queueLesen=()=>loadJSON(QUEUE_KEY,[]);
 const queueSchreiben=q=>{try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q));}catch(e){}};
 async function anEndpunkt(rec){
   /* text/plain vermeidet die Vorabanfrage, damit auch ein Google-Apps-Script-Endpunkt annimmt. */
+  /* Google Apps Script antwortet über eine Weiterleitung ohne Freigabe für fremde Seiten. Der Nachweis kommt an,
+     der Browser meldet trotzdem einen Fehler und die Anzeige blieb auf "Wartet auf die Übermittlung" (Befund 28.09.2026).
+     Deshalb geht die Sendung dorthin ohne Rückleseversuch; ein Netzfehler wird weiterhin erkannt und landet in der Warteschlange. */
+  if(/script\.google(usercontent)?\.com/.test(cfg.endpoint)){
+    await fetch(cfg.endpoint,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)});
+    return true;
+  }
   const res=await fetch(cfg.endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)});
   if(!res.ok) throw new Error('HTTP '+res.status);
   return true;
@@ -615,15 +630,16 @@ let MOD=null, SEG_TOTAL=0, SEG_COUNT=0;
 function setModule(id){ MOD=MODULES[id]||null; SEG_TOTAL=MOD?(MOD.languages.de||Object.values(MOD.languages)[0]).segments.length:0; SEG_COUNT=Math.max(0,SEG_TOTAL-1); }
 const modLangs=m=>Object.keys(m.languages||{});
 const modTitle=(m,lang)=>((m.languages[lang]||{}).title)||m.titleDE;
-const APP_VERSION='2.3.0';
+const APP_VERSION='2.4.0';
 /* Ein Gerät mit gesetzter PIN nimmt keine Einrichtung mehr über die URL an. Sonst könnte ein fremder QR-Code das Zielpostfach umleiten. */
 if(!cfg.pinHash){
   if(qp.get('kunde')) cfg.customer=qp.get('kunde');
   if(qp.get('mail')) cfg.mail=qp.get('mail');
   if(qp.get('video')) cfg.videoBase=qp.get('video');
+  if(qp.get('pruefer')) cfg.pruefer=qp.get('pruefer');
   if(qp.get('langs')) cfg.langs=qp.get('langs').split(',').map(s=>s.trim()).filter(k=>LANGS[k]);
   if(!cfg.langs.length) cfg.langs=['de'];
-  if(['kunde','mail','video','langs'].some(k=>qp.has(k))) saveJSON(CFG_KEY,cfg);
+  if(['kunde','mail','video','langs','pruefer'].some(k=>qp.has(k))) saveJSON(CFG_KEY,cfg);
 }
 
 /* ═══════════════════════════ Zustand ════════════════════════════════ */
@@ -726,7 +742,10 @@ function vLang(main){
 
 /* ── 2 Identifikation ────────────────────────────────────────────────── */
 function vWho(main){
-  const p=Object.assign({first:'',last:'',pnr:'',dept:'',company:''},S.person||{});
+  const p=Object.assign({first:'',last:'',pnr:'',dept:'',company:'',pruefer:''},S.person||{});
+  const prNamen=String(cfg.pruefer||'').split(';').map(x=>x.trim()).filter(Boolean);
+  const prSel=el('select',{class:'input',id:'f_pruefer',style:'font-size:17px',onchange:()=>prSel.classList.remove('invalid')},el('option',{value:''},T('prueferChoose')),...prNamen.map(n=>el('option',{value:n},n)),el('option',{value:'__allein'},T('prueferAllein')));
+  prSel.value=p.pruefer==='' ? '' : (prNamen.includes(p.pruefer)?p.pruefer:(p.pruefer===T('prueferAllein')?'__allein':''));
   if(!p.company&&cfg.customer!=='Musterbetrieb')p.company=cfg.customer;
   const f=(id,label,hint,req)=>{const wrap=el('div',{class:'field'},el('label',{for:'f_'+id},label,req?'':el('span',{class:'muted'},' ('+T('optional')+')')),el('input',{class:'input',id:'f_'+id,value:p[id]||'',autocomplete:'off',autocapitalize:'words',enterkeyhint:'next'}));if(hint)wrap.append(el('div',{class:'hint'},hint));return wrap;};
   const consent=el('input',{type:'checkbox',id:'consent'});
@@ -736,6 +755,7 @@ function vWho(main){
     f('company',T('company'),null,true),
     el('div',{class:'grid-2'},f('first',T('firstName'),null,true),f('last',T('lastName'),null,true)),
     el('div',{class:'grid-2'},f('pnr',T('personnelNo'),T('personnelHint'),false),f('dept',T('department'),null,false)),
+    el('div',{class:'field'},el('label',{for:'f_pruefer'},T('prueferLabel')),prSel,el('div',{class:'hint'},T('prueferHint'))),
     el('div',{class:'notice'},T('privacy'),el('div',{class:'small',style:'margin-top:6px'},cfg.mail?el('span',{},el('span',{html:ICON.mail,style:'display:inline-block;width:16px;vertical-align:-3px;margin-right:6px'}),T('sendMail',{company:cfg.customer})+': ',el('b',{},cfg.mail)):el('b',{style:'color:var(--danger)'},T('noMail')))),
     el('label',{class:'check',for:'consent'},consent,el('span',{},T('consent'))),
     err,
@@ -744,9 +764,10 @@ function vWho(main){
       el('button',{class:'btn big',onclick:()=>{
         const v=id=>$('#f_'+id).value.trim();
         let ok=true;for(const id of ['company','first','last']){const i=$('#f_'+id);i.classList.toggle('invalid',!v(id));if(!v(id))ok=false;}
+        prSel.classList.toggle('invalid',!prSel.value);if(!prSel.value)ok=false;
         if(!consent.checked)ok=false;
         err.hidden=ok;err.textContent=T('required');if(!ok)return;
-        S.person={first:v('first'),last:v('last'),pnr:v('pnr'),dept:v('dept'),company:v('company')};
+        S.person={first:v('first'),last:v('last'),pnr:v('pnr'),dept:v('dept'),company:v('company'),pruefer:prSel.value==='__allein'?T('prueferAllein'):prSel.value};
         cfg.customer=v('company');
         S.segIdx=0;S.seen={};S.questions=[];S.quiz=null;S.proof=null;S.doneModules=S.doneModules||{};
         go('modules');
@@ -1030,7 +1051,7 @@ function vQuiz(main){
   const answers=el('div',{class:'answers'});
   const fb=el('div',{class:'feedback',hidden:true});
   const nextBtn=el('button',{class:'btn big block',hidden:true,onclick:()=>{q.pos++;save();if(q.pos>=q.queue.length)finishQuiz();else go('quiz');}},T('next'),el('span',{html:ICON.next}));
-  const zweiterVersuchAn=cfg.zweiterVersuch===true;
+  const zweiterVersuchAn=cfg.einVersuch!==true;
   const done=()=>a.chosen!=null&&(a.correct===true||a.tries2===true||!zweiterVersuchAn);
   let picked=done()?null:a.chosen;const btns=[];
   a.order.forEach((ansIdx,k)=>{
@@ -1046,23 +1067,31 @@ function vQuiz(main){
   /* Erster Fehlversuch: die gewählte Antwort wird markiert, die übrigen bleiben anklickbar.
      Erst der zweite Fehlversuch führt in die Nachschulung. Die richtige Antwort bleibt verdeckt. */
   const showResult=()=>{
-    const zweiterVersuchMoeglich = cfg.zweiterVersuch===true && !a.correct && !a.tries2;
+    const zweiterVersuchMoeglich = zweiterVersuchAn && !a.correct && !a.tries2;
     btns.forEach((b,k)=>{const idx=a.order[k];
       if(zweiterVersuchMoeglich){ b.disabled = (idx===a.chosen); if(idx===a.chosen)b.classList.add('wrongpick'); b.classList.remove('selected'); }
-      else { b.disabled=true; if(a.correct&&idx===0)b.classList.add('correct'); else if(!a.correct&&(idx===a.chosen||idx===a.chosen1))b.classList.add('wrongpick'); }
+      else { b.disabled=true; b.classList.remove('selected');
+        /* Nach dem zweiten Versuch wird die richtige Antwort immer gezeigt (Festlegung 01.10.2026). */
+        if(idx===0&&(a.correct||a.tries2))b.classList.add('correct');
+        else if(!a.correct&&(idx===a.chosen||idx===a.chosen1))b.classList.add('wrongpick'); }
     });
     fb.hidden=false;fb.className='feedback '+(a.correct?'ok':'bad');
+    fb.className='feedback '+(a.correct||a.secondTry?'ok':'bad');
     fb.replaceChildren(a.correct
-      ? (a.secondTry?T('right')+' '+T('secondRight'):T('right'))
-      : el('span',{},el('b',{},T('wrong')),
-          el('div',{class:'small',style:'margin-top:8px;font-weight:600'}, zweiterVersuchMoeglich?T('tryAgain'):T('wrongWillRepeat'))));
+      ? T('right')
+      : a.tries2
+        ? el('span',{},el('b',{},a.secondTry?T('secondRightTitle'):T('secondWrongTitle')),
+            a.secondTry?null:el('div',{style:'margin-top:6px'},T('correctIs'),' ',el('b',{},'„'+def.a[0]+'“')),
+            el('div',{class:'small',style:'margin-top:8px;font-weight:600'},T('repeatAtEnd')))
+        : el('span',{},el('b',{},T('wrong')),
+            el('div',{class:'small',style:'margin-top:8px;font-weight:600'}, zweiterVersuchMoeglich?T('tryAgainHint'):T('wrongWillRepeat'))));
     if(zweiterVersuchMoeglich){ checkBtn.hidden=false; checkBtn.disabled=true; nextBtn.hidden=true; picked=null; }
     else { checkBtn.hidden=true; nextBtn.hidden=false; }
   };
   const checkBtn=el('button',{class:'btn big block',disabled:true,onclick:()=>{
     if(picked==null)return;
     if(zweiterVersuchAn && a.chosen!=null && a.correct===false && !a.tries2){ /* zweiter Versuch */
-      a.chosen1=a.chosen; a.tries2=true; a.chosen=picked; a.correct=picked===0; a.secondTry=a.correct;
+      a.chosen1=a.chosen; a.tries2=true; a.chosen=picked; a.secondTry=picked===0; a.correct=false; /* zählt als Fehler, Abschnitt wird wiederholt */
     } else if(a.chosen==null){
       a.chosen=picked; a.correct=picked===0;
     } else return;
@@ -1140,7 +1169,7 @@ function vQuizResult(main){
     const segs=L().segments;
     main.append(el('div',{class:'card result-hero bad'},el('div',{class:'mark'},'↻'),el('h1',{},T('failed')),el('p',{class:'muted'},T('failedText')),
       el('ul',{class:'q-list',style:'text-align:left'},segIds.map(id=>{const s=segs.find(x=>x.id===id);return el('li',{},el('b',{},id),s.title);})),
-      el('button',{class:'btn big block',style:'margin-top:14px',onclick:()=>{const first=segs.findIndex(s=>s.id===segIds[0]);S.quizLog=(S.quizLog||[]).concat(q.asked.map(a=>({id:a.id,correct:a.correct,runde:q.retry?2:1})));S.quiz=null;S.retryGroups=[...new Set(wrongGroups)];segIds.forEach(id=>{delete S.seen[id];});go('seg',{segIdx:first<0?0:first,repeatList:segIds});}},el('span',{html:ICON.repeat}),T('repeatSegments'))));
+      el('button',{class:'btn big block',style:'margin-top:14px',onclick:()=>{const first=segs.findIndex(s=>s.id===segIds[0]);S.quizLog=(S.quizLog||[]).concat(q.asked.map(a=>({id:a.id,correct:a.correct,secondTry:a.secondTry===true,runde:q.retry?2:1})));S.quiz=null;S.retryGroups=[...new Set(wrongGroups)];segIds.forEach(id=>{delete S.seen[id];});go('seg',{segIdx:first<0?0:first,repeatList:segIds});}},el('span',{html:ICON.repeat}),T('repeatSegments'))));
   }
 }
 
@@ -1162,7 +1191,7 @@ function vSign(main){
   const nOpen=S.questions.filter(q=>q.kind!=='inhalt').length;const stmt=nOpen?T('statementOpen',{title:MOD.titleDE,lang:L().name,n:nOpen}):T('statement',{title:MOD.titleDE,lang:L().name});
   const card=el('div',{class:'card stack'},
     el('h1',{},T('confirmTitle')),
-    el('div',{class:'notice'},el('b',{},S.person.first+' '+S.person.last+(S.person.pnr?' · '+S.person.pnr:'')),el('div',{},stmt)),
+    el('div',{class:'notice'},el('b',{},S.person.first+' '+S.person.last+(S.person.pnr?' · '+S.person.pnr:'')),el('div',{},stmt),S.person.pruefer?el('div',{class:'small',style:'margin-top:6px'},T('prueferLabel')+': '+S.person.pruefer):null),
     wrap,
     el('div',{class:'row between'},el('button',{class:'btn ghost',onclick:()=>{ctx.clearRect(0,0,cv.width,cv.height);drawn=false;ph.hidden=false;}},T('clear')),el('span',{class:'small muted'},fmtDate(new Date(),S.lang))),
     err,
@@ -1176,14 +1205,14 @@ async function createProof(sigData){
   const rnd=Math.random().toString(36).slice(2,6).toUpperCase();
   const id=`VD-${slug}-${MOD.docNo}-${S.lang.toUpperCase()}-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}-${rnd}`;
   /* Erste Runde ist die Diagnose, spätere Runden belegen die Nachschulung. */
-  const alleFragen=(S.quizLog||[]).concat(S.quiz.asked.map(a=>({id:a.id,correct:a.correct,runde:S.quiz.retry?2:1})));
+  const alleFragen=(S.quizLog||[]).concat(S.quiz.asked.map(a=>({id:a.id,correct:a.correct,secondTry:a.secondTry===true,runde:S.quiz.retry?2:1})));
   const runde1=alleFragen.filter(f=>f.runde===1);
   const rec={id,customer:(S.person&&S.person.company)||cfg.customer,module:MOD.id,moduleTitle:MOD.titleDE,docNo:MOD.docNo,docVersion:MOD.version,lang:S.lang,langName:L().nameDE||L().name,langDraft:!L().checked,
     person:S.person,startedAt:new Date(S.startedAt).toISOString(),finishedAt:now.toISOString(),durationMs:now-S.startedAt,
     segmentsSeen:Object.keys(S.seen),videoFailed:Object.keys(S.videoFail||{}),questionsAsked:alleFragen,correct:runde1.filter(f=>f.correct).length,asked:runde1.length,
     retrained:[...new Set(alleFragen.filter(f=>!f.correct).map(f=>MOD.groupSegment[f.id.split('-')[0]]).filter(Boolean))],
     passed:S.quiz.passed,themen:(S.quizTotal||runde1.length),nachSchulung:runde1.filter(f=>!f.correct).length,
-    openQuestions:S.questions,questionsPending:S.questions.some(q=>q.kind!=='inhalt'),responsible:cfg.responsible||'',statement:S.questions.some(q=>q.kind!=='inhalt')?'received':'received_understood',app:'jetztVerstehstDu PWA '+APP_VERSION};
+    openQuestions:S.questions,questionsPending:S.questions.some(q=>q.kind!=='inhalt'),responsible:cfg.responsible||'',pruefer:(S.person&&S.person.pruefer)||'',statement:S.questions.some(q=>q.kind!=='inhalt')?'received':'received_understood',app:'jetztVerstehstDu PWA '+APP_VERSION};
   rec.hash=await sha256(JSON.stringify(rec)+sigData);
   rec.signature=sigData;
   rec.hashRecipe='SHA-256( JSON.stringify(record ohne hash, signature, hashRecipe; Schlüsselreihenfolge wie in dieser Datei) + signature )';
@@ -1204,6 +1233,7 @@ function vProof(main){
     el('dt',{},T('duration')),el('dd',{},fmtDur(r.durationMs)),
     el('dt',{},T('segmentsSeen')),el('dd',{},T('allSeen',{n:r.segmentsSeen.length-1})),
     el('dt',{},T('result')),el('dd',{style:'color:var(--ok)'},T('resultPassed',{themen:(r.themen||r.asked),zusatz:(r.nachSchulung?T('resultNach',{n:r.nachSchulung}):T('resultDirekt'))})),
+    el('dt',{},T('prueferLabel')),el('dd',{},r.pruefer||T('responsibleOpen')),
     el('dt',{},T('responsibleLine')),el('dd',{},r.responsible||T('responsibleOpen')),
     el('dt',{},T('questionsAsked')),el('dd',{},r.questionsAsked.map(q=>q.id+(q.correct?' ✓':(q.secondTry===true?' ✗ ('+T('secondRightShort')+')':' ✗'))).join(', ')),
     ...(()=>{const u=r.openQuestions.filter(q=>q.kind!=='inhalt'), e=r.openQuestions.filter(q=>q.kind==='inhalt');
@@ -1220,7 +1250,7 @@ function vProof(main){
     dl,
     el('div',{class:'sig'},el('div',{class:'small muted',style:'margin-bottom:6px'},T('signature')),el('img',{src:r.signature,alt:T('signature')})),
     el('div',{class:'foot'},`jetztVerstehstDu | ${r.id} | ${r.customer} | Dok-Nr ${r.docNo} | ${lang.toUpperCase()} | ${r.docVersion} | SHA-256 ${r.hash}`,el('br'),T('footer'),lang!=='de'?' '+T('originalNote'):''));
-  const mailBody=[`${T('proofTitle')} · jetztVerstehstDu`,``,`${T('proofId')}: ${r.id}`,`${T('participant')}: ${r.person.first} ${r.person.last}${r.person.pnr?' · '+r.person.pnr:''}${r.person.dept?' · '+r.person.dept:''}`,`${T('company')}: ${r.customer}`,`${T('module')}: ${r.moduleTitle} (${r.docVersion})`,`${T('language')}: ${r.langName}`,`${T('dateTime')}: ${fmtDate(new Date(r.finishedAt),lang)}`,`${T('duration')}: ${fmtDur(r.durationMs)}`,`${T('result')}: ${T('resultPassed',{themen:(r.themen||r.asked),zusatz:(r.nachSchulung?T('resultNach',{n:r.nachSchulung}):T('resultDirekt'))})}`,`${T('responsibleLine')}: ${r.responsible||T('responsibleOpen')}`,`${T('questionsAsked')}: ${r.questionsAsked.map(q=>q.id+(q.correct?' OK':' X')).join(', ')}`,`${T('openQuestionsU')}: ${r.openQuestions.filter(q=>q.kind!=='inhalt').map(q=>q.seg+': '+q.text).join(' | ')||T('noOpenQuestions')}`,
+  const mailBody=[`${T('proofTitle')} · jetztVerstehstDu`,``,`${T('proofId')}: ${r.id}`,`${T('participant')}: ${r.person.first} ${r.person.last}${r.person.pnr?' · '+r.person.pnr:''}${r.person.dept?' · '+r.person.dept:''}`,`${T('company')}: ${r.customer}`,`${T('module')}: ${r.moduleTitle} (${r.docVersion})`,`${T('language')}: ${r.langName}`,`${T('dateTime')}: ${fmtDate(new Date(r.finishedAt),lang)}`,`${T('duration')}: ${fmtDur(r.durationMs)}`,`${T('result')}: ${T('resultPassed',{themen:(r.themen||r.asked),zusatz:(r.nachSchulung?T('resultNach',{n:r.nachSchulung}):T('resultDirekt'))})}`,`${T('prueferLabel')}: ${r.pruefer||T('responsibleOpen')}`,`${T('responsibleLine')}: ${r.responsible||T('responsibleOpen')}`,`${T('questionsAsked')}: ${r.questionsAsked.map(q=>q.id+(q.correct?' OK':(q.secondTry===true?' X ('+T('secondRightShort')+')':' X'))).join(', ')}`,`${T('openQuestionsU')}: ${r.openQuestions.filter(q=>q.kind!=='inhalt').map(q=>q.seg+': '+q.text).join(' | ')||T('noOpenQuestions')}`,
     `${T('openQuestionsE')}: ${r.openQuestions.filter(q=>q.kind==='inhalt').map(q=>q.seg+': '+q.text).join(' | ')||T('noOpenQuestions')}`,
     r.responsible?`${T('clarifiedBy')}: ${r.responsible}`:'',`${T('checksum')} (SHA-256): ${r.hash}`,``,T('footer')].join('\n');
   const subject=T('mailSubject',{module:MOD.id,name:r.person.first+' '+r.person.last,date:fmtDate(new Date(r.finishedAt),lang)});
@@ -1285,6 +1315,7 @@ function vSetup(main){
         el('div',{class:'hint',style:'margin:2px 0 0'},'Legt ein Band über die Fotos: hier stehen später Ihre eigenen Aufnahmen. Abschalten, sobald echte Bilder aus dem Betrieb hinterlegt sind.'))),
     f('endpoint','Endpunkt für den automatischen Versand',cfg.endpoint,'Adresse des Webhooks oder des Google-Apps-Script-Dienstes. Ist sie eingetragen, geht der Nachweis von selbst dorthin und wartet bei fehlendem Netz in der Schlange.','url'),
     f('responsible','Verantwortliche Person',cfg.responsible,'Name der Person, die Rückfragen der Mitarbeiter klärt. Erscheint in der App und im Nachweis.'),
+    f('pruefer','Unterweisende Personen zur Auswahl',cfg.pruefer,'Namen mit Semikolon trennen. Teilnehmende wählen vor dem Start aus, wer die Unterweisung begleitet. Erscheint im Nachweis.'),
     f('videoBase','Video-Basis-URL',cfg.videoBase,'Optional. Erwartet Dateien wie BA09_S01_DE.mp4 unter dieser Adresse. Leer = Textkarten.'),
     f('pin','PIN für diese Einrichtung',cfg.pinHash?'••••':'', cfg.pinHash?'Gesetzt. Neue PIN eintragen, um sie zu ändern. Mit PIN nimmt das Gerät keine Einrichtung mehr über QR-Links an.':'Mindestens vier Zeichen. Schützt Postfach und Einstellungen vor Änderungen durch Dritte.','password'),
     el('div',{class:'field'},el('label',{},'Sprachen anbieten'),...langChecks),
@@ -1295,7 +1326,7 @@ function vSetup(main){
         if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){toast('Bitte ein gültiges E-Mail-Postfach eintragen.');$('#c_mail').focus();return;}
         if(!cfg.pinHash && pin.trim().length<4){toast('Bitte eine PIN mit mindestens vier Zeichen setzen.');$('#c_pin').focus();return;}
         if(pin && pin!=='••••'){if(pin.trim().length<4){toast('PIN: mindestens vier Zeichen.');return;}cfg.pinHash=await sha256('vd-pin:'+pin.trim());}
-        cfg.customer=$('#c_customer').value.trim()||DEFAULT_CFG.customer;cfg.mail=mail;cfg.endpoint=$('#c_endpoint').value.trim();cfg.demoBilder=$('#c_demo').checked;cfg.responsible=$('#c_responsible').value.trim();cfg.videoBase=$('#c_videoBase').value.trim();cfg.langs=Object.keys(LANGS).filter(k=>$('#l_'+k).checked);if(!cfg.langs.length)cfg.langs=['de'];
+        cfg.customer=$('#c_customer').value.trim()||DEFAULT_CFG.customer;cfg.mail=mail;cfg.endpoint=$('#c_endpoint').value.trim();cfg.demoBilder=$('#c_demo').checked;cfg.responsible=$('#c_responsible').value.trim();cfg.pruefer=$('#c_pruefer').value.trim();cfg.videoBase=$('#c_videoBase').value.trim();cfg.langs=Object.keys(LANGS).filter(k=>$('#l_'+k).checked);if(!cfg.langs.length)cfg.langs=['de'];
         saveJSON(CFG_KEY,cfg);linkBox.textContent=link();toast('Gespeichert. Einrichtung ist mit PIN geschützt.');}},'Speichern'),
       el('button',{class:'btn secondary',onclick:()=>{history.replaceState(null,'',location.pathname+location.search);go('lang');}},'Zur App'),
       el('button',{class:'btn ghost',onclick:()=>{if(confirm('Laufende Unterweisung auf diesem Gerät verwerfen?')){wipe();toast('Zurückgesetzt.');}}},'Laufende Unterweisung verwerfen'))));
