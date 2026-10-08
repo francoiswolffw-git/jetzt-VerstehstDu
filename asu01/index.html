@@ -1,4 +1,47 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+/* Hinweis zur Satzpause unter der Videoleiste */
+.pz-tipp{font-size:13px;line-height:1.4;color:#7A4A12;background:#FDF3E7;border-radius:var(--radius-sm);padding:7px 12px}
+.pz-tipp b{font-weight:700}
+/* Laptop und Monitor: alles auf einen Blick, ohne Scrollen (08.10.2026) */
+@media (min-width:900px){
+  .app{min-height:0;padding-bottom:10px}
+  body{min-height:0}
+  h1{font-size:21px;margin-bottom:4px}
+  .field label{font-size:13px}
+  .mod-list>:not(.mod-btn){grid-column:1/-1}
+  header.top{padding:8px 0 6px}
+  main{gap:12px}
+  footer.bottom{padding-top:12px}
+  .card{padding:16px 20px}
+  .hero{padding:14px 18px}
+  .hero h1{font-size:20px}
+  .lang-list{grid-template-columns:1fr 1fr;gap:8px}
+  .lang-btn{min-height:50px;font-size:16px}
+  .field{gap:3px}
+  .field .hint{display:none}
+  .input{min-height:40px;padding:6px 12px}
+  .grid-2{gap:10px 14px}
+  .check{padding:4px 0}
+  .notice{padding:6px 10px;font-size:12px}
+  footer.bottom{font-size:11px}
+  .btn.big{min-height:48px;font-size:16px}
+  .mod-list{grid-template-columns:1fr 1fr;gap:8px}
+  .mod-btn{min-height:56px;padding:8px 12px}
+  .topics{padding:2px 2px 4px}
+  .chip{min-height:32px}
+  .answer{min-height:46px;padding:10px 14px;font-size:15px}
+  .answers{gap:8px;margin:10px 0}
+  .sigwrap canvas{height:170px}
+}
+@media (min-width:1100px){
+  .seg-layout{grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:stretch}
+  .seg-layout>.stage-wrap>.stage{height:calc(100dvh - 290px);min-height:340px;max-height:640px;grid-template-columns:auto 1fr}
+  .seg-layout .stage-av{height:100%;aspect-ratio:9/16;width:auto}
+  .seg-layout .stage-av::before{content:none}
+  .seg-layout>.stack>.card:first-child{max-height:calc(100dvh - 290px);font-size:17px;padding:16px 20px}
+  .stage-info.points h3{font-size:22px}
+}
+</style></head><body>
 <title>jetztVerstehstDu Unterweisung</title>
 <style>
 /* ── Design-Tokens · Marke jetztVerstehstDu ─────────────────────────── */
@@ -126,6 +169,19 @@ textarea.input{min-height:96px;resize:vertical}
 .media .avatar-note{position:absolute;top:18px;right:18px;font-size:11px;opacity:.75;background:rgba(0,0,0,.25);padding:2px 8px;border-radius:6px}
 .seg-text{font-size:17px;line-height:1.6}
 .seg-text p{margin:0}
+.seg-text .sz{border-radius:4px;transition:background .25s,box-shadow .25s}
+.seg-text .sz.now{background:#FDF3E7;box-shadow:0 0 0 3px #FDF3E7}
+.seg-text .kw{font-weight:700}
+.seg-text .sz.now .kw{color:#A85F12}
+.vbtn.pz{width:auto;min-width:64px;padding:0 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.vbar.mit-pz{flex-wrap:wrap}
+.vbar.mit-pz .vtrack{flex:1 1 120px}
+@media (max-width:480px){.vbtn.pz{min-width:0;padding:0 8px;font-size:12px}}
+.vbtn.pz.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.stage-av .halt{position:absolute;right:8px;bottom:8px;z-index:3;display:flex;align-items:center;gap:6px;background:rgba(10,16,32,.72);color:#fff;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px}
+.stage-av .halt i{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.stage-info .jetzt{margin-top:6px;font-size:clamp(15px,3.4vw,22px);font-weight:800;line-height:1.2;color:#fff;background:rgba(200,120,30,.95);border-radius:8px;padding:6px 10px;align-self:flex-start;transition:opacity .25s}
+.stage-info .jetzt:empty{display:none}
 .seg-actions{display:flex;gap:10px;flex-wrap:wrap}
 .nav{display:flex;gap:10px;justify-content:space-between;align-items:center}
 .nav .btn{flex:1}
@@ -300,6 +356,8 @@ textarea.input{min-height:96px;resize:vertical}
 <script>
 window.VD_SINGLE=true;
 window.VD_IMAGES={};
+/* Satzzeiten je Abschnitt (Deutsch): a = Satzbeginn, p = Haltepunkt in der echten Sprechpause, t = Satz, k = Schlüsselwort. Gemessen am 08.10.2026 an den Chad-Videos v07. */
+window.VD_CUES={"S00": [{"a": 0.0, "p": 2.42, "t": "Willkommen! Schön, dass Sie dabei sind.", "k": "Willkommen"}, {"a": 2.59, "p": 6.34, "t": "Ich bin ein Avatar, erstellt mit künstlicher Intelligenz.", "k": "künstlicher Intelligenz"}, {"a": 6.59, "p": 10.1, "t": "Sie sehen eine gekürzte Musterfassung mit drei Themen.", "k": "drei Themen"}, {"a": 10.39, "p": 14.28, "t": "Sie können das Video jederzeit anhalten und noch einmal ansehen.", "k": "anhalten"}, {"a": 14.49, "p": 17.14, "t": "Am Ende beantworten Sie einige kurze Fragen.", "k": "einige kurze Fragen"}, {"a": 17.5, "p": 20.76, "t": "Wenn etwas unklar ist, fragen Sie Ihre Führungskraft.", "k": "Führungskraft"}], "S01": [{"a": 0.0, "p": 2.48, "t": "Nutzen Sie die markierten Gehwege.", "k": "markierten Gehwege"}, {"a": 2.61, "p": 4.6, "t": "Gehen Sie ruhig und aufmerksam.", "k": "aufmerksam"}, {"a": 4.84, "p": 7.1, "t": "Nutzen Sie auf Treppen den Handlauf.", "k": "Handlauf"}, {"a": 7.52, "p": 10.72, "t": "In den Hallen fahren Stapler und Hubwagen.", "k": "Stapler und Hubwagen"}, {"a": 10.92, "p": 13.02, "t": "Bleiben Sie vor einem Fahrweg stehen.", "k": "stehen"}, {"a": 13.21, "p": 15.32, "t": "Suchen Sie Blickkontakt mit dem Fahrer.", "k": "Blickkontakt"}, {"a": 15.56, "p": 18.78, "t": "Lassen Sie herankommende Fahrzeuge zuerst vorbeifahren.", "k": "zuerst vorbeifahren"}, {"a": 19.07, "p": 22.16, "t": "Kreuzen Sie erst, wenn der Fahrweg sicher frei ist.", "k": "sicher frei"}, {"a": 22.61, "p": 26.14, "t": "Halten Sie Gehwege, Fahrwege und Türen frei.", "k": "frei"}], "S02": [{"a": 0.0, "p": 3.34, "t": "Sie kennen Ihren Arbeitsplatz und sehen, wenn etwas nicht stimmt.", "k": "Arbeitsplatz"}, {"a": 3.54, "p": 5.28, "t": "Ihre Hinweise sind wichtig.", "k": "wichtig"}, {"a": 6.34, "p": 9.16, "t": "Melden Sie Gefahren und Schäden sofort Ihrer Führungskraft.", "k": "sofort"}, {"a": 9.31, "p": 12.6, "t": "Zum Beispiel ein beschädigtes Kabel oder eine kaputte Leiter.", "k": "Kabel"}, {"a": 12.89, "p": 16.24, "t": "Beenden Sie die Arbeit mit einem beschädigten Gerät sofort.", "k": "Beenden Sie die Arbeit"}, {"a": 16.56, "p": 19.84, "t": "Schalten Sie es aus, wenn das gefahrlos möglich ist.", "k": "Schalten Sie es aus"}, {"a": 20.04, "p": 23.7, "t": "Sichern und kennzeichnen Sie es nach den Regeln Ihres Betriebs.", "k": "Sichern und kennzeichnen"}, {"a": 24.8, "p": 26.3, "t": "Melden Sie auch Beinahe-Unfälle.", "k": "Beinahe-Unfälle"}, {"a": 26.56, "p": 30.32, "t": "Das sind Situationen, in denen es fast zu einem Unfall gekommen wäre.", "k": "fast"}], "S03": [{"a": 0.0, "p": 4.44, "t": "Lassen Sie sich Notausgänge, Feuerlöscher und Sammelplatz zeigen.", "k": "Sammelplatz zeigen"}, {"a": 4.74, "p": 7.84, "t": "Folgen Sie im Notfall den grünen Fluchtwegschildern.", "k": "grünen Fluchtwegschildern"}, {"a": 8.2, "p": 11.48, "t": "Bei einem Feueralarm unterbrechen Sie sofort Ihre Arbeit.", "k": "unterbrechen Sie sofort"}, {"a": 11.74, "p": 14.08, "t": "Verlassen Sie das Gebäude über den Fluchtweg.", "k": "Fluchtweg"}, {"a": 14.34, "p": 17.76, "t": "Nehmen Sie immer die Treppe, auch aus anderen Stockwerken.", "k": "immer die Treppe"}, {"a": 18.07, "p": 20.12, "t": "Gehen Sie direkt zum Sammelplatz.", "k": "Sammelplatz"}, {"a": 20.38, "p": 23.72, "t": "Bleiben Sie dort, bis die verantwortliche Person Entwarnung gibt.", "k": "Entwarnung"}, {"a": 23.99, "p": 26.3, "t": "Die Feuerwehr erreichen Sie unter eins eins zwei.", "k": "eins eins zwei"}], "S04": [{"a": 0.0, "p": 4.06, "t": "Sie haben die drei Themen dieser Kurzfassung gesehen.", "k": "drei Themen"}, {"a": 4.28, "p": 6.9, "t": "Jetzt sind Sie dran: mit ein paar kurzen Fragen.", "k": "kurzen Fragen"}, {"a": 7.15, "p": 9.42, "t": "Danach bestätigen Sie Ihre Teilnahme.", "k": "Teilnahme"}, {"a": 9.67, "p": 14.2, "t": "Ihr Betrieb erhält den Nachweis über Ihre Teilnahme und das Ergebnis des Wissenschecks.", "k": "Nachweis"}, {"a": 14.43, "p": 16.72, "t": "Ich wünsche Ihnen einen sicheren Arbeitstag.", "k": "sicheren Arbeitstag"}]};
 window.VD_VIDEOS={};
 window.VD_MODULES = window.VD_MODULES || {};
 window.VD_MODULES.ASU01 = {
@@ -498,8 +556,8 @@ window.VD_MODULES.ASU01 = {
         { id: "S02", short: "Melden", title: "Gefahren melden",
           text: "Sie kennen Ihren Arbeitsplatz und sehen, wenn etwas nicht stimmt. Ihre Hinweise sind wichtig. Melden Sie Gefahren und Schäden sofort Ihrer Führungskraft. Zum Beispiel ein beschädigtes Kabel oder eine kaputte Leiter. Beenden Sie die Arbeit mit einem beschädigten Gerät sofort. Schalten Sie es aus, wenn das gefahrlos möglich ist. Sichern und kennzeichnen Sie es nach den Regeln Ihres Betriebs. Melden Sie auch Beinahe-Unfälle. Das sind Situationen, in denen es fast zu einem Unfall gekommen wäre.",
           sub: ["Gefahr erkennen", "Sofort melden", "Gerät sichern", "Beinahe-Unfälle melden"] },
-        { id: "S03", short: "Flucht", title: "Brandalarm und Flucht",
-          text: "Lassen Sie sich Notausgänge, Feuerlöscher und Sammelplatz zeigen. Folgen Sie im Notfall den grünen Fluchtwegschildern. Bei einem Brandalarm unterbrechen Sie sofort Ihre Arbeit. Verlassen Sie das Gebäude über den Fluchtweg. Nehmen Sie immer die Treppe, auch aus anderen Stockwerken. Gehen Sie direkt zum Sammelplatz. Bleiben Sie dort, bis die verantwortliche Person Entwarnung gibt. Die Feuerwehr erreichen Sie unter eins eins zwei.",
+        { id: "S03", short: "Flucht", title: "Feueralarm und Flucht",
+          text: "Lassen Sie sich Notausgänge, Feuerlöscher und Sammelplatz zeigen. Folgen Sie im Notfall den grünen Fluchtwegschildern. Bei einem Feueralarm unterbrechen Sie sofort Ihre Arbeit. Verlassen Sie das Gebäude über den Fluchtweg. Nehmen Sie immer die Treppe, auch aus anderen Stockwerken. Gehen Sie direkt zum Sammelplatz. Bleiben Sie dort, bis die verantwortliche Person Entwarnung gibt. Die Feuerwehr erreichen Sie unter eins eins zwei.",
           sub: ["Fluchtweg", "Nur Treppe", "Sammelplatz", "Feuerwehr 112"] },
         { id: "S04", short: "Geschafft", title: "Drei Themen geschafft",
           text: "Sie haben die drei Themen dieser Kurzfassung gesehen. Jetzt sind Sie dran: mit ein paar kurzen Fragen. Danach bestätigen Sie Ihre Teilnahme. Ihr Betrieb erhält den Nachweis über Ihre Teilnahme und das Ergebnis des Wissenschecks. Ich wünsche Ihnen einen sicheren Arbeitstag.",
@@ -527,7 +585,7 @@ window.VD_MODULES.ASU01 = {
                 "Ich erzähle es nur den Kollegen in meiner Schicht."] }
         ],
         P3: [
-          { id: "P3-V1", q: "Der Brandalarm ertönt. Was tun Sie?",
+          { id: "P3-V1", q: "Der Feueralarm ertönt. Was tun Sie?",
             a: ["Ich gehe über den Fluchtweg zum Sammelplatz.",
                 "Ich hole erst meine Sachen aus dem Spind.",
                 "Ich nehme den Aufzug, weil das schneller geht."] },
@@ -678,9 +736,12 @@ function seitenGroesse(){
   if(!app) return;
   const breite=document.documentElement.clientWidth;
   app.style.zoom=''; if(band)band.style.zoom='';
-  if(breite<1100) return;
-  const z=Math.min(2,Math.max(1,(breite-30)/app.offsetWidth));
+  if(breite<900) return;
+  let z=Math.min(2,Math.max(1,(breite-30)/app.offsetWidth));
   app.style.zoom=z; if(band)band.style.zoom=z;
+  /* Laptop: nur so weit vergrößern, dass alles ohne Scrollen auf den Bildschirm passt (08.10.2026) */
+  while(z>0.72&&document.documentElement.scrollHeight>window.innerHeight+2){
+    z=Math.max(0.72,Math.round((z-0.05)*100)/100); app.style.zoom=z; if(band)band.style.zoom=z;}
 }
 if(!window.__vdGroesseBound){window.__vdGroesseBound=true;
   window.addEventListener('resize',()=>{seitenGroesse();if(window.__vdFit)window.__vdFit();},{passive:true});}
@@ -737,7 +798,7 @@ function vLang(main){
 function vWho(main){
   const p=Object.assign({first:'',last:'',pnr:'',dept:'',company:'',pruefer:''},S.person||{});
   const prNamen=String(cfg.pruefer||'').split(';').map(x=>x.trim()).filter(Boolean);
-  const prSel=el('select',{class:'input',id:'f_pruefer',style:'font-size:17px',onchange:()=>prSel.classList.remove('invalid')},el('option',{value:''},T('prueferChoose')),...prNamen.map(n=>el('option',{value:n},n)),el('option',{value:'__allein'},T('prueferAllein')));
+  const prSel=el('select',{class:'input',id:'f_pruefer',style:'font-size:17px',onchange:()=>prSel.classList.remove('invalid')},el('option',{value:''},T('prueferChoose')),...prNamen.map(n=>el('option',{value:n},n)));
   prSel.value=p.pruefer==='' ? '' : (prNamen.includes(p.pruefer)?p.pruefer:(p.pruefer===T('prueferAllein')?'__allein':''));
   if(!p.company&&cfg.customer!=='Musterbetrieb')p.company=cfg.customer;
   const f=(id,label,hint,req)=>{const wrap=el('div',{class:'field'},el('label',{for:'f_'+id},label,req?'':el('span',{class:'muted'},' ('+T('optional')+')')),el('input',{class:'input',id:'f_'+id,value:p[id]||'',autocomplete:'off',autocapitalize:'words',enterkeyhint:'next'}));if(hint)wrap.append(el('div',{class:'hint'},hint));return wrap;};
@@ -820,6 +881,8 @@ function vSeg(main){
   let hasVideo=false, stage=null;
   if(videoUrl){
     const v=el('video',{playsinline:true,preload:'auto',src:videoUrl});curVideo=v;
+    const CUES=(S.lang==='de'&&window.VD_CUES&&window.VD_CUES[seg.id])||null;
+    let cueIdx=-1, cueDone=CUES?CUES.map(()=>false):[], haltTimer=null, haltBox=null, jetztBox=null;
     /* Rechte Fläche: Bilder wechseln im Takt des Videos, sonst stehen dort die Merkpunkte. */
     const info=el('div',{class:'stage-info'});
     let shots=[], keinBild=false;
@@ -833,6 +896,7 @@ function vSeg(main){
       info.classList.add('points'); keinBild=true;
       info.append(el('div',{class:'num'},seg.id===segs[0].id?T('intro'):T('segmentOf',{n:i,total:SEG_COUNT})),
                   el('h3',{},seg.title), el('ul',{},seg.sub.map(x=>el('li',{},x))));
+      if(CUES){jetztBox=el('div',{class:'jetzt','aria-live':'polite'});info.append(jetztBox);}
       /* Hinweis auf der freien blauen Flaeche: hier stehen spaeter die Bilder des Betriebs. */
       if(cfg.demoBilder!==false){info.classList.add('mit-band');
         info.append(el('div',{class:'demo-band leer'},el('b',{},T('demoEigene'))));}
@@ -854,7 +918,7 @@ function vSeg(main){
       if(d>0&&d<1.5)gelaufen+=d;
       letzteZeit=v.currentTime;
       if(v.duration&&gelaufen/v.duration>=0.9)markSeen();
-      if(shots.length>1&&v.duration){const n=Math.min(shots.length-1,Math.floor(v.currentTime/v.duration*shots.length));
+      if(!CUES&&shots.length>1&&v.duration){const n=Math.min(shots.length-1,Math.floor(v.currentTime/v.duration*shots.length));
         shots.forEach((f,k)=>f.classList.toggle('on',k===n));}
     });
     v.addEventListener('ended',()=>{markSeen();if(renderPending&&topics.isConnected){renderPending=false;render();}});
@@ -901,8 +965,36 @@ function vSeg(main){
     v.addEventListener('timeupdate',()=>{if(!v.duration)return;$('.vfill',track).style.width=(v.currentTime/v.duration*100)+'%';time.textContent=fmt(v.currentTime)+' / '+fmt(v.duration);});
     v.addEventListener('loadedmetadata',()=>{time.textContent='0:00 / '+fmt(v.duration);});
     av.addEventListener('click',e=>{if(e.target===v){v.paused?v.play():v.pause();}});
-    bar.append(playBtn,backBtn,again,track,time);
+    /* Satzpause: hält nach jedem Satz kurz an. Die Stimme bleibt unverändert, es kommt nur Ruhe zwischen die Sätze. */
+    let pzBtn=null;
+    if(CUES){
+      const pzText=()=>S.satzPause?('Satzpause +'+S.satzPause+' s'):'Satzpause aus';
+      pzBtn=el('button',{class:'vbtn pz'+(S.satzPause?' on':''),'aria-label':'Längere Pause nach jedem Satz'},pzText());
+      pzBtn.onclick=()=>{S.satzPause=((S.satzPause||0)+1)%3;save();pzBtn.textContent=pzText();pzBtn.classList.toggle('on',!!S.satzPause);toast(S.satzPause?('Nach jedem Satz '+S.satzPause+' Sekunde'+(S.satzPause>1?'n':'')+' Pause'):'Satzpause aus');};
+      haltBox=el('div',{class:'halt',hidden:true},el('i',{}),'Pause');av.append(haltBox);
+      const textSpans=()=>[...document.querySelectorAll('.seg-text .sz')];
+      const setCue=n=>{if(n===cueIdx)return;cueIdx=n;textSpans().forEach((s,k)=>s.classList.toggle('now',k===n));
+        if(jetztBox)jetztBox.textContent=n>=0?CUES[n].k:'';
+        if(shots.length>1){const m=Math.min(shots.length-1,Math.floor(n/CUES.length*shots.length));shots.forEach((f,k)=>f.classList.toggle('on',k===m));}};
+      const endHalt=()=>{if(haltTimer){clearTimeout(haltTimer);haltTimer=null;}if(haltBox)haltBox.hidden=true;};
+      const tick=()=>{
+        if(!v.isConnected)return;
+        const t=v.currentTime;let n=CUES.findIndex(c=>t<c.p);if(n<0)n=CUES.length-1;setCue(n);
+        const c=CUES[n-1];
+        if(!v.paused&&S.satzPause&&n>0&&c&&!cueDone[n-1]&&t>=c.p&&t<c.p+0.6){
+          cueDone[n-1]=true;v.pause();haltBox.hidden=false;
+          haltTimer=setTimeout(()=>{haltTimer=null;haltBox.hidden=true;v.play();},S.satzPause*1000);}
+        if(!v.paused)requestAnimationFrame(tick);
+      };
+      v.addEventListener('play',()=>{endHalt();requestAnimationFrame(tick);});
+      v.addEventListener('seeking',()=>{endHalt();const t=v.currentTime;cueDone=CUES.map(c=>c.p<t-0.05);});
+      v.addEventListener('ended',()=>{endHalt();setCue(-1);});
+      v.addEventListener('loadedmetadata',()=>setCue(0));
+    }
+    if(pzBtn)bar.classList.add('mit-pz');
+    bar.append(playBtn,backBtn,again,...(pzBtn?[pzBtn]:[]),track,time);
     stage.vbar=bar;
+    if(pzBtn)stage.vtip=el('div',{class:'pz-tipp'},el('b',{},'Mehr Zeit zum Mitdenken: '),'Tippen Sie auf „Satzpause“. Dann hält das Video nach jedem Satz kurz an, einmal für 1 Sekunde, zweimal für 2 Sekunden.');
   } else {renderCard(media,seg,i);media.append(el('div',{style:'margin-top:12px;color:var(--accent);font-size:13px;font-weight:600'},({en:'Avatar video in this language: available in the pilot',fr:'Vidéo avec avatar dans cette langue : disponible dans le pilote'})[S.lang]||'Video mit Avatar in dieser Sprache: im Pilot'));markSeen();}
   /* Text + Aktionen */
   const qBox=el('div',{class:'q-box',hidden:true});
@@ -940,7 +1032,9 @@ function vSeg(main){
       el('button',{class:'btn ghost',onclick:()=>{qBox.hidden=true;if(window.__vdFit)window.__vdFit();}},T('cancel'))));
   const myQs=S.questions.filter(q=>q.seg===seg.id);
   const kindLabel=q=>T(q.kind==='inhalt'?'qKindErrorShort':'qKindUnderstandShort');
-  const textWrap=el('div',{class:'seg-text'},el('p',{},seg.text));
+  const cuesT=(S.lang==='de'&&window.VD_CUES&&window.VD_CUES[seg.id])||null;
+  const satz=c=>{const i0=c.t.indexOf(c.k);return el('span',{class:'sz'},i0<0?c.t:[c.t.slice(0,i0),el('b',{class:'kw'},c.k),c.t.slice(i0+c.k.length)]);};
+  const textWrap=el('div',{class:'seg-text'},cuesT?el('p',{},cuesT.flatMap((c,k)=>k?[' ',satz(c)]:[satz(c)])):el('p',{},seg.text));
   const textCard=el('div',{class:'card stack'},
     el('h2',{},seg.title),
     textWrap,
@@ -961,7 +1055,7 @@ function vSeg(main){
   const openCount=(repIdx?repIdx.map(x=>segs[x]):segs).filter(x=>!S.seen[x.id]).length;
   const hint=(last&&!allSeen)?el('div',{class:'small',style:'text-align:center;color:var(--accent);font-weight:600'},T('watchAll',{n:openCount}))
             :(hasVideo&&!S.seen[seg.id])?el('div',{class:'small muted',style:'text-align:center'},T('watchThis')):null;
-  const layout=el('div',{class:'seg-layout'},stage?el('div',{class:'stage-wrap'},stage,stage.vbar):media,el('div',{class:'stack'},textCard,nav,hint,i===0&&!hint?el('div',{class:'small muted',style:'text-align:center'},T('swipeHint')):null));
+  const layout=el('div',{class:'seg-layout'},stage?el('div',{class:'stage-wrap'},stage,stage.vbar,stage.vtip||null):media,el('div',{class:'stack'},textCard,nav,hint,i===0&&!hint?el('div',{class:'small muted',style:'text-align:center'},T('swipeHint')):null));
   if(!L().checked) main.insertBefore(el('div',{class:'draft-banner'},
     el('div',{},L().draftNoteLocal||L().draftNote||''),
     el('div',{dir:'ltr',style:'font-size:12px;font-weight:500;opacity:.8;margin-top:2px'},'Prüffassung '+(L().nameDE||L().name)+' · '+(L().draftNote||''))),main.firstChild);
