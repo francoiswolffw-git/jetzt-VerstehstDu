@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Avatare und Stimmen | jetztVerstehstDu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: ruhige Musterkarte, Avatare als Hochformat-Kacheln in einem Raster, darunter der direkte Stimmvergleich */
+:root{
+  --bg:#EEF1F6; --surface:#FFFFFF; --ink:#14213D; --muted:#55627A; --line:#D3DAE6;
+  --brand:#1B3A8C; --brand-soft:#DDE3EC; --signal:#E8701A;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1626; --surface:#18223A; --ink:#E8ECF5; --muted:#9AA6BF; --line:#2A3654;
+  --brand:#8FA8F0; --brand-soft:#22305A; --signal:#F2954A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1626; --surface:#18223A; --ink:#E8ECF5; --muted:#9AA6BF; --line:#2A3654;
+  --brand:#8FA8F0; --brand-soft:#22305A; --signal:#F2954A; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:28px 56px;display:grid;gap:40px}
+header{display:grid;gap:10px}
+.wrap>*{min-width:0}
+.card,.meta{min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:800;color:var(--brand);letter-spacing:.01em}
+.brand span{color:var(--signal)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,4vw,2.7rem);line-height:1.1;margin:0;text-wrap:balance}
+.lead{margin:0;max-width:62ch;color:var(--muted);font-size:1.08rem}
+.stand{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+button.copy{font:600 .9rem var(--body);background:var(--brand);color:var(--surface);border:0;border-radius:6px;padding:9px 14px;cursor:pointer}
+button.copy:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+h2{font-family:var(--display);font-weight:700;font-size:1.35rem;margin:0}
+.sec{display:grid;gap:16px}
+.sec>p{margin:0;max-width:62ch;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:grid;grid-template-rows:auto 1fr}
+.card video{display:block;width:100%;aspect-ratio:9/16;max-width:100%;background:var(--brand-soft);object-fit:cover}
+.meta{padding:14px 16px 16px;display:grid;gap:8px;align-content:start;min-width:0}
+.name{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.name b{font-family:var(--display);font-size:1.2rem}
+.tag{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--brand);background:var(--brand-soft);border-radius:999px;padding:2px 9px;white-space:nowrap}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:.92rem}
+dt{color:var(--muted)} dd{margin:0}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:18px;max-width:640px}
+.voices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:12px}
+.voice{border-top:3px solid var(--brand);padding-top:10px;display:grid;gap:4px}
+.voice b{font-family:var(--display)}
+.voice span{color:var(--muted);font-size:.93rem}
+.full{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:12px}
+.full a{display:grid;gap:2px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.full a:hover,.full a:focus-visible{border-color:var(--brand);outline:none}
+.full a b{font-family:var(--display);color:var(--brand)}
+.full a span{color:var(--muted);font-size:.92rem}
+.mehr{font-weight:600;color:var(--brand);text-decoration:none}
+.mehr:hover,.mehr:focus-visible{text-decoration:underline}
+.next{border:1px dashed var(--line);border-radius:10px;padding:16px 18px;color:var(--muted);max-width:760px}
+.next b{color:var(--ink)}
+footer{color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="inhalt">
+  <header>
+    <div class="top">
+      <div class="brand">jetzt<span>Verstehst</span>Du</div>
+      <button class="copy" id="kopieren" type="button">Alles kopieren</button>
+    </div>
+    <div class="stand">Musterauswahl · Stand 09.10.2026</div>
+    <h1>Avatare und Stimmen für Ihre Unterweisung und Einarbeitung</h1>
+    <p class="lead">Sie wählen, wer Ihre Mitarbeitenden unterweist und einarbeitet. Jeder Avatar spricht dieselben Inhalte, Ihr Betrieb entscheidet über Gesicht, Kleidung und Stimme. So passt jede Unterweisung zu Ihrem Lager und zu Ihren Leuten.</p>
+  </header>
+
+  <section class="sec" aria-labelledby="h-avatare">
+    <h2 id="h-avatare">Avatare</h2>
+    <p>Alle Proben zeigen denselben Abschnitt zum Feueralarm. So sehen und hören Sie den Unterschied direkt. Jede Probe dauert rund 25 Sekunden.</p>
+    <div class="grid">
+      <article class="card">
+        <video src="clips/chad_douglas.mp4" poster="clips/chad_douglas.jpg" controls playsinline preload="metadata"></video>
+        <div class="meta">
+          <div class="name"><b>Chad</b><span class="tag">Lager</span></div>
+          <dl><dt>Kleidung</dt><dd>Warnweste</dd><dt>Stimme</dt><dd>Douglas, tief und markant</dd><dt>Wirkung</dt><dd>erfahren, verschafft sich Gehör</dd></dl>
+          <a class="mehr" href="../asu01/" target="_blank" rel="noopener">Komplette Unterweisung ansehen</a>
+        </div>
+      </article>
+      <article class="card">
+        <video src="clips/adrian.mp4" poster="clips/adrian.jpg" controls playsinline preload="metadata"></video>
+        <div class="meta">
+          <div class="name"><b>Adrian</b><span class="tag">Führungskraft</span></div>
+          <dl><dt>Kleidung</dt><dd>dunkelblauer Pullover</dd><dt>Stimme</dt><dd>Clemens, klar und bestimmt</dd><dt>Wirkung</dt><dd>sachlich, wie die Lagerleitung</dd></dl>
+          <a class="mehr" href="../asu01-b/" target="_blank" rel="noopener">Komplette Unterweisung ansehen</a>
+        </div>
+      </article>
+      <article class="card" id="karte-amanda">
+        <video src="clips/amanda.mp4" poster="clips/amanda.jpg" controls playsinline preload="metadata"></video>
+        <div class="meta">
+          <div class="name"><b>Amanda</b><span class="tag">Lager</span></div>
+          <dl><dt>Kleidung</dt><dd>Warnweste</dd><dt>Stimme</dt><dd>Greta, ruhig und freundlich</dd><dt>Wirkung</dt><dd>zugewandt, gut verständlich</dd></dl>
+          <a class="mehr" href="../asu01-c/" target="_blank" rel="noopener">Komplette Unterweisung ansehen</a>
+        </div>
+      </article>
+      <article class="card">
+        <video src="clips/florin.mp4" poster="clips/florin.jpg" controls playsinline preload="metadata"></video>
+        <div class="meta">
+          <div class="name"><b>Florin</b><span class="tag">Bau</span></div>
+          <dl><dt>Kleidung</dt><dd>Schutzhelm und Latzhose</dd><dt>Stimme</dt><dd>Clemens, klar und bestimmt</dd><dt>Wirkung</dt><dd>jung, ideal für Baustellen</dd></dl>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-vergleich">
+    <h2 id="h-vergleich">Ein Avatar, zwei Stimmen</h2>
+    <p>Derselbe Abschnitt, einmal mit tiefer und einmal mit klarer Stimme. Die Stimme lässt sich für jeden Avatar frei wählen.</p>
+    <div class="pair">
+      <article class="card">
+        <video src="clips/chad_douglas.mp4" poster="clips/chad_douglas.jpg" controls playsinline preload="metadata"></video>
+        <div class="meta"><div class="name"><b>Chad mit Douglas</b></div><dl><dt>Länge</dt><dd>29 Sekunden, ruhiges Tempo</dd></dl></div>
+      </article>
+      <article class="card">
+        <video src="clips/chad_clemens.mp4" poster="clips/chad_clemens.jpg" controls playsinline preload="metadata"></video>
+        <div class="meta"><div class="name"><b>Chad mit Clemens</b></div><dl><dt>Länge</dt><dd>23 Sekunden, zügiges Tempo</dd></dl></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-stimmen">
+    <h2 id="h-stimmen">Stimmen</h2>
+    <div class="voices">
+      <div class="voice"><b>Douglas</b><span>Männlich, tief und rau. Schafft Aufmerksamkeit und Respekt.</span></div>
+      <div class="voice"><b>Clemens</b><span>Männlich, klar und bestimmt. Gut verständlich bei zügigem Tempo.</span></div>
+      <div class="voice"><b>Greta</b><span>Weiblich, ruhig und freundlich. Angenehm über längere Abschnitte.</span></div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-voll">
+    <h2 id="h-voll">Komplette Musterunterweisung</h2>
+    <p>Drei Themen, Wissenscheck und Nachweis. Dieselbe Unterweisung mit drei verschiedenen Avataren.</p>
+    <div class="full">
+      <a href="../asu01/" target="_blank" rel="noopener"><b>Mit Chad</b><span>Warnweste, Stimme Douglas</span></a>
+      <a href="../asu01-b/" target="_blank" rel="noopener"><b>Mit Adrian</b><span>Pullover, Stimme Clemens</span></a>
+      <a href="../asu01-c/" target="_blank" rel="noopener"><b>Mit Amanda</b><span>Warnweste, Stimme Greta</span></a>
+    </div>
+  </section>
+
+  <div class="next"><b>Ihr Wunsch zählt:</b> Die Bibliothek wächst auf je drei Männer und drei Frauen, von jung bis erfahren, mit drei bis fünf Stimmen. Haben Sie besondere Wünsche, suchen wir gemeinsam die passende Besetzung für Ihren Betrieb.</div>
+
+  <footer>jetztVerstehstDu · Mehrsprachige Sicherheitsunterweisungen · Die Avatare sind mit künstlicher Intelligenz erstellt.</footer>
+</div>
+
+<script>
+document.getElementById('kopieren').addEventListener('click', async function(){
+  var t = document.getElementById('inhalt').innerText.replace('Alles kopieren','').replace(/\n{3,}/g,'\n\n').trim();
+  var b = this;
+  try { await navigator.clipboard.writeText(t); b.textContent = 'Kopiert'; }
+  catch(e){ var r=document.createRange(); r.selectNodeContents(document.getElementById('inhalt')); var s=getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent='Text markiert'; }
+  setTimeout(function(){ b.textContent = 'Alles kopieren'; }, 2000);
+});
+document.querySelectorAll('video').forEach(function(v){
+  v.addEventListener('play', function(){ document.querySelectorAll('video').forEach(function(o){ if(o!==v) o.pause(); }); });
+});
+</script>
+
+</body>
+</html>
