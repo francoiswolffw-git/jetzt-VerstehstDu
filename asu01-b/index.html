@@ -343,7 +343,7 @@ textarea.input{min-height:96px;resize:vertical}
   .seg-layout .stage-av video,.seg-layout .stage-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 }
 </style>
-<div class="no-print" style="background:#1B3A8C;color:#fff;font-size:12px;padding:6px 12px;text-align:center">Musterunterweisung · Allgemeine Sicherheitsunterweisung · aktuell in Deutsch mit Avatar-Video, weitere Sprachen entstehen gemeinsam mit dem Pilotbetrieb</div>
+<div class="no-print" style="background:#1B3A8C;color:#fff;font-size:12px;padding:6px 12px;text-align:center">Musterunterweisung · Allgemeine Sicherheitsunterweisung · aktuell in Deutsch mit Avatar-Video, weitere Sprachen vereinbaren und prüfen wir mit Ihnen</div>
 
 <div class="app" id="app">
   <header class="top">
@@ -540,8 +540,8 @@ window.VD_MODULES.ASU01 = {
         prueferChoose: "Bitte auswählen",
         prueferAllein: "Allein am eigenen Gerät durchgeführt",
         exampleLangsTitle: "Beispiel: So erscheinen später die Sprachen Ihres Betriebs",
-        exampleLangNote: "Beispiel · entsteht im Pilot",
-        exampleLangToast: "{sprache} richten wir im Pilot für Ihren Betrieb ein. Die Musterunterweisung läuft auf Deutsch.",
+        exampleLangNote: "Beispiel · für Ihren Betrieb",
+        exampleLangToast: "{sprache} richten wir für Ihren Betrieb ein. Die Musterunterweisung läuft auf Deutsch.",
         exampleModsTitle: "Beispiel: So erscheinen später Ihre eigenen Unterweisungen",
         exampleModNote: "Beispiel · Ihre Unterweisung, Ihre Bilder, Ihre Sprachen",
         repeatMode: "Wiederholung: {n} Abschnitt(e), danach folgt der Wissenscheck erneut."
@@ -770,7 +770,7 @@ function vLang(main){
   for(const k of langs){
     const l=LANGS[k];
     list.append(el('button',{class:'lang-btn'+(l.checked?'':' draft'),lang:k,dir:l.dir,onclick:()=>{S.lang=k;S.startedAt=S.startedAt||Date.now();go(S.person?'modules':'who');}},
-      el('span',{},el('span',{},l.name),l.checked?null:el('span',{class:'draft-note'},l.draftNoteLocal||l.draftNote||''),l.hasVideo?el('span',{style:'color:var(--accent);font-size:12px;font-weight:600;display:block;margin-top:2px'},'Mit Avatar-Video'):el('span',{style:'color:var(--accent);font-size:12px;font-weight:600;display:block;margin-top:2px'},'Textfassung · Avatar-Video im Pilot')),
+      el('span',{},el('span',{},l.name),l.checked?null:el('span',{class:'draft-note'},l.draftNoteLocal||l.draftNote||''),l.hasVideo?el('span',{style:'color:var(--accent);font-size:12px;font-weight:600;display:block;margin-top:2px'},'Mit Avatar-Video'):el('span',{style:'color:var(--accent);font-size:12px;font-weight:600;display:block;margin-top:2px'},'Textfassung · Avatar-Video für Ihren Betrieb')),
       el('span',{class:'code'},k.toUpperCase())));
   }
   /* Vorführung: Beispielsprachen zeigen, wie die Sprachen des Betriebs später erscheinen (Wunsch François 01.10.2026).
@@ -995,7 +995,7 @@ function vSeg(main){
     bar.append(playBtn,backBtn,again,...(pzBtn?[pzBtn]:[]),track,time);
     stage.vbar=bar;
     if(pzBtn)stage.vtip=el('div',{class:'pz-tipp'},el('b',{},'Mehr Zeit zum Mitdenken: '),'Tippen Sie auf „Satzpause“. Dann hält das Video nach jedem Satz kurz an, einmal für 1 Sekunde, zweimal für 2 Sekunden.');
-  } else {renderCard(media,seg,i);media.append(el('div',{style:'margin-top:12px;color:var(--accent);font-size:13px;font-weight:600'},({en:'Avatar video in this language: available in the pilot',fr:'Vidéo avec avatar dans cette langue : disponible dans le pilote'})[S.lang]||'Video mit Avatar in dieser Sprache: im Pilot'));markSeen();}
+  } else {renderCard(media,seg,i);media.append(el('div',{style:'margin-top:12px;color:var(--accent);font-size:13px;font-weight:600'},({en:'Avatar video in this language: available for your company',fr:'Vidéo avec avatar dans cette langue : disponible pour votre entreprise'})[S.lang]||'Video mit Avatar in dieser Sprache: für Ihren Betrieb'));markSeen();}
   /* Text + Aktionen */
   const qBox=el('div',{class:'q-box',hidden:true});
   const qBtn=el('button',{class:'btn ghost qbtn',onclick:()=>{qBox.hidden=!qBox.hidden;if(window.__vdFit)window.__vdFit();if(!qBox.hidden)$('textarea',qBox).focus();}},el('span',{html:ICON.q}),T('haveQuestion'));
