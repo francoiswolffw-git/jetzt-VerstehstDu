@@ -368,7 +368,7 @@ window.VD_MODULES.ASU01 = {
   id: "ASU01",
   docNo: "ASU",
   docDate: "08.10.26",
-  version: "v0.7",
+  version: "v1.0",
   status: "MUSTER",
   titleDE: "Allgemeine Sicherheitsunterweisung · Musterfassung",
   shortDE: "Allgemeine Sicherheitsunterweisung",
@@ -623,7 +623,7 @@ window.VD_MODULES.ASU01 = {
 'use strict';
 /* ═══════════════════════════ Konfiguration ═══════════════════════════ */
 const CFG_KEY='vd_config_asu01k', STATE_KEY='vd_state_asu01k';
-const DEFAULT_CFG={konfetti:true, klang:true, einVersuch:false, beispiele:true, pruefer:'Frau Muster (Lagerleitung, Beispiel); Herr Beispiel (Fachkraft für Arbeitssicherheit, Beispiel)', customer:'Musterbetrieb', mail:'francoiswolf.fw@googlemail.com', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
+const DEFAULT_CFG={konfetti:true, klang:true, einVersuch:false, beispiele:true, pruefer:'Frau Muster (Lagerleitung, Beispiel); Herr Beispiel (Fachkraft für Arbeitssicherheit, Beispiel)', customer:'Musterbetrieb', mail:'kontakt@jetztverstehstdu.de', endpoint:'https://script.google.com/macros/s/AKfycbwQW-0Nq9Nn2EeWWpenpO7QMtRyMKa60Qg_MEe45-R4Dytt_2gLVnxjrud06Yi2FvIm1g/exec', demoBilder:true, responsible:'', videoBase:'videos', langs:['de','en','fr','da'], module:'BA09', avatarNote:true};
 let cfg=loadJSON(CFG_KEY,{});
 cfg=Object.assign({},DEFAULT_CFG,cfg);
 /* ASU01 Kurzfassung v07: Videos liegen in ./videos */
@@ -1484,7 +1484,7 @@ function vProof(main){
         : el('div',{class:'feedback retry'},el('b',{},T('sendQueued')),T('sendQueuedHint'),
             el('button',{class:'btn secondary block',style:'margin-top:10px',onclick:async e=>{e.currentTarget.disabled=true;await queueSenden();render();}},T('sendRetry'))))
     : el('div',{class:'notice'},el('b',{},T('sendNoEndpoint')),el('div',{class:'small',style:'margin-top:4px'},T('sendNoEndpointHint')));
-  const zielZeile=el('div',{class:'small muted',style:'margin-top:-4px'},T('sendTarget',{mail:cfg.mail||'francoiswolf.fw@googlemail.com'}));
+  const zielZeile=el('div',{class:'small muted',style:'margin-top:-4px'},T('sendTarget',{mail:cfg.mail||'kontakt@jetztverstehstdu.de'}));
   const notfall=el('div',{hidden:!(cfg.endpoint&&!r.deliveredAt&&inWarteschlange)},
     el('button',{class:'btn secondary block',onclick:()=>{jsonBtn.click();setTimeout(()=>{wipe();toast(T('wiped'));go('lang');},900);}},T('wipeAfterSave')),
     el('div',{class:'small muted',style:'margin-top:4px'},T('wipeAfterSaveHint')));
