@@ -486,6 +486,7 @@ window.VD_MODULES.ASU01 = {
         mailSubject: "Unterweisungsnachweis {module} · {name} · {date}",
         deviceVoice: "Gerätestimme",
         sendDone: "An {ziel} übermittelt",
+        sendDoneUnbestaetigt: "An {ziel} abgeschickt (Vorführung, ohne Empfangsbestätigung)",
         sendQueued: "Wartet auf die Übermittlung",
         sendQueuedHint: "Der Nachweis ist gespeichert und geht los, sobald wieder Netz da ist. Sie können das Gerät weglegen.",
         sendRetry: "Jetzt noch einmal versuchen",
@@ -642,21 +643,24 @@ async function anEndpunkt(rec){
      Deshalb geht die Sendung dorthin ohne Rückleseversuch; ein Netzfehler wird weiterhin erkannt und landet in der Warteschlange. */
   if(/script\.google(usercontent)?\.com/.test(cfg.endpoint)){
     await fetch(cfg.endpoint,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)});
-    return true;
+    return 'unbestaetigt';   /* nur für Vorführungen: abgeschickt, Empfang nicht prüfbar */
   }
   const res=await fetch(cfg.endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)});
   if(!res.ok) throw new Error('HTTP '+res.status);
-  return true;
+  /* Vertrag für Kundenendpunkte (ab 2.6.0): Antwort {"ok":true,"id":"<Nachweis-ID>"}. Ohne diese Bestätigung bleibt der Nachweis in der Warteschlange. */
+  let j=null;try{j=await res.json();}catch(e){}
+  if(!j||j.ok!==true||j.id!==rec.id) throw new Error('Keine Empfangsbestätigung');
+  return 'bestaetigt';
 }
-function zugestellt(id){
-  if(S.proof&&S.proof.id===id&&!S.proof.deliveredAt){S.proof.deliveredAt=new Date().toISOString();save();}
+function zugestellt(id,art){
+  if(S.proof&&S.proof.id===id&&!S.proof.deliveredAt){S.proof.deliveredAt=new Date().toISOString();if(art!=='bestaetigt')S.proof.deliveryUnconfirmed=true;save();}
 }
 async function queueSenden(){
   const q=queueLesen();
   if(!q.length||!cfg.endpoint||!navigator.onLine) return {offen:q.length,gesendet:0};
   const rest=[];let gesendet=0;
   for(const e of q){
-    try{await anEndpunkt(e.rec);zugestellt(e.rec.id);gesendet++;}
+    try{const art=await anEndpunkt(e.rec);zugestellt(e.rec.id,art);gesendet++;}
     catch(err){e.versuche=(e.versuche||0)+1;e.letzterFehler=String(err&&err.message||err);e.zuletzt=new Date().toISOString();rest.push(e);}
   }
   queueSchreiben(rest);
@@ -665,7 +669,7 @@ async function queueSenden(){
 async function nachweisZustellen(){
   const r=S.proof;
   if(!r||r.deliveredAt||!cfg.endpoint) return;
-  try{await anEndpunkt(r);r.deliveredAt=new Date().toISOString();save();}
+  try{const art=await anEndpunkt(r);r.deliveredAt=new Date().toISOString();if(art!=='bestaetigt')r.deliveryUnconfirmed=true;save();}
   catch(e){
     const q=queueLesen();
     if(!q.some(x=>x.rec&&x.rec.id===r.id)){q.push({rec:r,versuche:1,letzterFehler:String(e&&e.message||e),zuletzt:new Date().toISOString()});queueSchreiben(q);}
@@ -684,7 +688,7 @@ let MOD=null, SEG_TOTAL=0, SEG_COUNT=0;
 function setModule(id){ MOD=MODULES[id]||null; SEG_TOTAL=MOD?(MOD.languages.de||Object.values(MOD.languages)[0]).segments.length:0; SEG_COUNT=Math.max(0,SEG_TOTAL-1); }
 const modLangs=m=>Object.keys(m.languages||{});
 const modTitle=(m,lang)=>((m.languages[lang]||{}).title)||m.titleDE;
-const APP_VERSION='2.5.0';
+const APP_VERSION='2.6.0';
 /* Ein Gerät mit gesetzter PIN nimmt keine Einrichtung mehr über die URL an. Sonst könnte ein fremder QR-Code das Zielpostfach umleiten. */
 if(!cfg.pinHash){
   if(qp.get('kunde')) cfg.customer=qp.get('kunde');
@@ -711,10 +715,10 @@ if(location.hash==='#setup') S.screen=cfg.pinHash?S.screen:'setup';
 if(location.hash==='#setup' && cfg.pinHash) setTimeout(()=>checkPin().then(ok=>{if(ok)go('setup');else toast('PIN stimmt leider nicht.');}),300);
 if(location.hash==='#neu'){S=fresh();history.replaceState(null,'',location.pathname+location.search);}
 
-function save(){S.updatedAt=Date.now();saveJSON(STATE_KEY,S);}
+function save(){S.updatedAt=Date.now();if(GETEILT()){tabletSpeichern();try{localStorage.removeItem(STATE_KEY);}catch(e){}return;}saveJSON(STATE_KEY,S);}
 /* Ein neues Modul beginnt: Fortschritt zurücksetzen, Person und erledigte Module bleiben */
 function startModule(id){setModule(id);Object.assign(S,{module:id,segIdx:0,seen:{},questions:[],quiz:null,proof:null,repeatList:null,startedAt:Date.now()});save();}
-function wipe(){S=fresh();try{localStorage.removeItem(STATE_KEY);}catch(e){}}
+function wipe(){if(aktiv){eintragLoeschen(aktiv.id);aktiv=null;}S=fresh();try{localStorage.removeItem(STATE_KEY);}catch(e){}}
 function loadJSON(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 
@@ -727,34 +731,75 @@ function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}
 const PARK_KEY=STATE_KEY.replace('state','park'), PARK_TRY_KEY=STATE_KEY.replace('state','parkversuch');
 const GETEILT=()=>cfg.geteilt===true;
 const sperreMs=()=>Math.max(1,Number(cfg.sperreMin)||5)*60000;
-const parkLesen=()=>{const max=Math.max(1,Number(cfg.parkStunden)||8)*3600000;return loadJSON(PARK_KEY,[]).filter(p=>p&&Date.now()-p.parkedAt<max);};
-const parkSchreiben=a=>saveJSON(PARK_KEY,a);
+const parkMax=()=>Math.max(1,Number(cfg.parkStunden)||8)*3600000;
+/* Version 2.6.0: Auf geteilten Geräten liegt kein Stand mehr im Klartext. Jede Sitzung hat einen zufälligen
+   Datenschlüssel (AES-GCM 256). Er wird mit einem Schlüssel aus Nachname und Fortsetzungscode verpackt
+   (PBKDF2, SHA-256, eigener Salt je Sitzung, 150.000 Runden). Im Speicher stehen nur Salt, verpackter Schlüssel
+   und verschlüsselter Stand. Abgelaufene Einträge werden beim Lesen gelöscht.
+   Grenze: Ein Code aus vier Ziffern hält eine gezielte Auswertung des Gerätespeichers nur auf, er verhindert sie
+   nicht. Gegen Neugier am Tablet schützt er, eine Anmeldung im Sinne einer Zugangskontrolle ist er nicht. */
+const PBKDF2_RUNDEN=150000;
+const b64=buf=>{const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);};
+const unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
 const normName=x=>String(x||'').trim().toLowerCase().normalize('NFC');
-function codeHash(name,code){return sha256('vd-fortsetzen:'+normName(name)+':'+String(code||'').trim());}
+function parkSchreiben(a){saveJSON(PARK_KEY,a);}
+function parkLesen(){const alle=loadJSON(PARK_KEY,[]);const gut=alle.filter(p=>p&&p.v===2&&Date.now()-(p.updatedAt||0)<parkMax());if(gut.length!==alle.length)parkSchreiben(gut);return gut;}
+function eintragLoeschen(id){parkSchreiben(loadJSON(PARK_KEY,[]).filter(p=>p&&p.id!==id));}
+let aktiv=null, speicherKette=Promise.resolve();
+async function codeSchluessel(name,code,salt){
+  const basis=await crypto.subtle.importKey('raw',new TextEncoder().encode('vd-fortsetzen:'+normName(name)+':'+String(code||'').trim()),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:PBKDF2_RUNDEN,hash:'SHA-256'},basis,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function sitzungStarten(name,code){
+  const salt=crypto.getRandomValues(new Uint8Array(16)), wiv=crypto.getRandomValues(new Uint8Array(12));
+  const k=await codeSchluessel(name,code,salt);
+  const roh=crypto.getRandomValues(new Uint8Array(32));
+  const wk=await crypto.subtle.encrypt({name:'AES-GCM',iv:wiv},k,roh);
+  const id='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const a=parkLesen();a.push({v:2,id,salt:b64(salt),wiv:b64(wiv),wk:b64(wk),updatedAt:Date.now()});parkSchreiben(a);
+  aktiv={id,key:await crypto.subtle.importKey('raw',roh,'AES-GCM',false,['encrypt','decrypt'])};roh.fill(0);
+}
+function tabletSpeichern(){
+  if(!aktiv) return speicherKette;
+  const {id,key}=aktiv, text=JSON.stringify(S);
+  speicherKette=speicherKette.then(async()=>{
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(text));
+    const a=loadJSON(PARK_KEY,[]);const e=a.find(x=>x&&x.id===id);if(!e)return;
+    e.iv=b64(iv);e.data=b64(ct);e.updatedAt=Date.now();parkSchreiben(a);
+  }).catch(()=>{});
+  return speicherKette;
+}
 const nachweisSicher=r=>!!(r&&(r.deliveredAt||queueLesen().some(x=>x.rec&&x.rec.id===r.id)));
-function parken(){
-  if(!S.person||!S.person.codeHash||(S.proof&&nachweisSicher(S.proof))){wipe();return;}
-  const id=S.parkId||('p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
-  S.parkId=id;S.updatedAt=Date.now();
-  const a=parkLesen().filter(p=>p.id!==id);a.push({id,hash:S.person.codeHash,parkedAt:Date.now(),state:S});
-  parkSchreiben(a);wipe();
+async function parken(){
+  if(aktiv){
+    if(!S.person||(S.proof&&nachweisSicher(S.proof))) eintragLoeschen(aktiv.id);
+    else await tabletSpeichern();
+  }
+  aktiv=null;S=fresh();try{localStorage.removeItem(STATE_KEY);}catch(e){}
 }
 async function fortsetzen(name,code){
   if(!/^\d{4}$/.test(String(code||'').trim())||!normName(name)) return false;
-  const h=await codeHash(name,code);const a=parkLesen();
-  let i=-1;a.forEach((p,k)=>{if(p.hash===h&&(i<0||p.parkedAt>a[i].parkedAt))i=k;});
-  if(i<0) return false;
-  const p=a.splice(i,1)[0];parkSchreiben(a);
-  S=Object.assign(fresh(),p.state);
-  if(S.module&&MODULES[S.module])setModule(S.module);
-  save();return true;
+  const kandidaten=parkLesen().filter(e=>e.data).sort((x,y)=>y.updatedAt-x.updatedAt);
+  for(const e of kandidaten){
+    try{
+      const k=await codeSchluessel(name,code,unb64(e.salt));
+      const roh=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(e.wiv)},k,unb64(e.wk)));
+      const key=await crypto.subtle.importKey('raw',roh,'AES-GCM',false,['encrypt','decrypt']);roh.fill(0);
+      const klar=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(e.iv)},key,unb64(e.data));
+      aktiv={id:e.id,key};S=Object.assign(fresh(),JSON.parse(new TextDecoder().decode(klar)));
+      if(S.module&&MODULES[S.module])setModule(S.module);
+      save();return true;
+    }catch(err){}
+  }
+  return false;
 }
 let letzteNutzung=Date.now(), sperrBox=null, sperrTakt=null;
 const genutzt=()=>{letzteNutzung=Date.now();};
 ['pointerdown','keydown','touchstart','wheel','input'].forEach(ev=>document.addEventListener(ev,genutzt,{capture:true,passive:true}));
 document.addEventListener('timeupdate',()=>{if(!document.hidden)genutzt();},true);
 function sperrAus(){clearInterval(sperrTakt);sperrTakt=null;if(sperrBox)sperrBox.remove();sperrBox=null;}
-function sperrJetzt(){sperrAus();document.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});parken();toast(T('geteiltGesichert'));go('lang');}
+function sperrJetzt(){sperrAus();document.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});$('#main').replaceChildren();parken().then(()=>{toast(T('geteiltGesichert'));go('lang');});}
 function sperrPruefen(){
   if(!GETEILT()||!S.person||S.screen==='setup'||S.screen==='lang'||sperrBox) return;
   const ruhe=Date.now()-letzteNutzung;
@@ -858,7 +903,7 @@ function vLang(main){
   }
   const card=el('div',{class:'card stack'},list);
   main.append(hero,card);
-  if(GETEILT()&&parkLesen().length){ /* geteiltes Gerät: keine Namen zeigen, nur mit Code fortsetzen */
+  if(GETEILT()&&parkLesen().some(p=>p.data&&(!aktiv||p.id!==aktiv.id))){ /* geteiltes Gerät: keine Namen zeigen, nur mit Code fortsetzen */
     main.append(el('div',{class:'card row between'},
       el('div',{},el('b',{},T('geteiltParken')),el('div',{class:'small muted'},T('geteiltParkenHint'))),
       el('button',{class:'btn',onclick:()=>go('fortsetzen')},T('continue'))));
@@ -901,7 +946,7 @@ function vWho(main){
         let codeOk=true;if(GETEILT()){codeOk=/^\d{4}$/.test(v('code'));$('#f_code').classList.toggle('invalid',!codeOk);if(!codeOk)ok=false;}
         err.hidden=ok;err.textContent=codeOk?T('required'):T('geteiltCodeFehlt');if(!ok)return;
         S.person={first:v('first'),last:v('last'),pnr:v('pnr'),dept:v('dept'),company:v('company'),pruefer:prSel.value==='__allein'?T('prueferAllein'):prSel.value};
-        if(GETEILT()){S.person.codeHash=await codeHash(S.person.last,v('code'));S.parkId=null;}
+        if(GETEILT()){if(aktiv)await parken();aktiv=null;await sitzungStarten(S.person.last,v('code'));}
         cfg.customer=v('company');
         S.segIdx=0;S.seen={};S.questions=[];S.quiz=null;S.proof=null;S.doneModules=S.doneModules||{};
         go('modules');
@@ -1435,7 +1480,7 @@ function vProof(main){
   const inWarteschlange=queueLesen().some(x=>x.rec&&x.rec.id===r.id);
   const statusFeld=cfg.endpoint
     ? (r.deliveredAt
-        ? el('div',{class:'feedback ok'},'✓ '+T('sendDone',{ziel:cfg.customer})+' · '+fmtDate(new Date(r.deliveredAt),lang))
+        ? el('div',{class:'feedback ok'},'✓ '+T(r.deliveryUnconfirmed?'sendDoneUnbestaetigt':'sendDone',{ziel:cfg.customer})+' · '+fmtDate(new Date(r.deliveredAt),lang))
         : el('div',{class:'feedback retry'},el('b',{},T('sendQueued')),T('sendQueuedHint'),
             el('button',{class:'btn secondary block',style:'margin-top:10px',onclick:async e=>{e.currentTarget.disabled=true;await queueSenden();render();}},T('sendRetry'))))
     : el('div',{class:'notice'},el('b',{},T('sendNoEndpoint')),el('div',{class:'small',style:'margin-top:4px'},T('sendNoEndpointHint')));
@@ -1512,7 +1557,7 @@ function vSetup(main){
       el('input',{type:'checkbox',id:'c_geteilt',checked:cfg.geteilt===true}),
       el('span',{},'Gemeinsam genutztes Gerät (Tablet im Betrieb)',
         el('div',{class:'hint',style:'margin:2px 0 0'},'Jede Person wählt beim Start einen Fortsetzungscode. Nach '+(Number(cfg.sperreMin)||5)+' Minuten ohne Eingabe wird die Unterweisung gesichert und der Bildschirm frei; ein laufendes Video zählt als Nutzung. Fortsetzen nur mit Nachname und Code. Gesicherte Stände verfallen nach '+(Number(cfg.parkStunden)||8)+' Stunden. Dafür den Endpunkt eintragen.'))),
-    f('endpoint','Endpunkt für den automatischen Versand',cfg.endpoint,'Adresse des Webhooks oder des Google-Apps-Script-Dienstes. Ist sie eingetragen, geht der Nachweis von selbst dorthin und wartet bei fehlendem Netz in der Schlange.','url'),
+    f('endpoint','Endpunkt für den automatischen Versand',cfg.endpoint,'Adresse des Empfangsdienstes. Ist sie eingetragen, geht der Nachweis von selbst dorthin und wartet bei fehlendem Netz in der Schlange. Der Dienst bestätigt jeden Nachweis mit {"ok":true,"id":"Nachweis-ID"}; ohne diese Bestätigung bleibt der Nachweis in der Schlange. Google Apps Script nur für Vorführungen, dort ist der Empfang nicht prüfbar.','url'),
     f('responsible','Verantwortliche Person',cfg.responsible,'Name der Person, die Rückfragen der Mitarbeiter klärt. Erscheint in der App und im Nachweis.'),
     f('pruefer','Unterweisende Personen zur Auswahl',cfg.pruefer,'Namen mit Semikolon trennen. Teilnehmende wählen vor dem Start aus, wer die Unterweisung begleitet. Erscheint im Nachweis.'),
     f('videoBase','Video-Basis-URL',cfg.videoBase,'Optional. Erwartet Dateien wie BA09_S01_DE.mp4 unter dieser Adresse. Leer = Textkarten.'),
@@ -1543,7 +1588,7 @@ if('serviceWorker'in navigator && !window.VD_SINGLE && location.protocol.startsW
 }
 /* Wortmarke: 5× tippen öffnet die Einrichtung */
 let taps=0,tapT;$('#wordmark').addEventListener('click',e=>{e.preventDefault();taps++;clearTimeout(tapT);tapT=setTimeout(()=>taps=0,1500);if(taps>=5){taps=0;checkPin().then(ok=>{if(ok)go('setup');else toast('PIN stimmt leider nicht.');});}else if(taps===1&&S.screen!=='setup'){/* einfacher Tipp: nichts */}});
-if(GETEILT()&&S.person&&S.screen!=='setup'){parken();S.screen='lang';}
+if(GETEILT()){try{localStorage.removeItem(STATE_KEY);}catch(e){}if(S.screen!=='setup')S=fresh();parkLesen();}
 window.addEventListener('hashchange',()=>{if(location.hash==='#setup')checkPin().then(ok=>{if(ok)go('setup');else{toast('PIN stimmt leider nicht.');history.replaceState(null,'',location.pathname+location.search);}});});
 render();
 })();
