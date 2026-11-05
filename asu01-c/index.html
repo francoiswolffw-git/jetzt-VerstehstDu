@@ -308,6 +308,10 @@ textarea.input{min-height:96px;resize:vertical}
 /* ── Setup ───────────────────────────────────────────────────────────── */
 .kv{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;background:var(--surface-2);padding:8px 10px;border-radius:6px;overflow-wrap:anywhere}
 
+/* ── Gemeinsam genutztes Gerät ── */
+.sperre{position:fixed;inset:0;background:rgba(14,22,40,.72);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+.sperre .card{max-width:420px;width:100%;text-align:center}
+.sperre .zahl{font-size:44px;font-weight:700;color:var(--primary);margin:4px 0 8px}
 /* ── Toast ───────────────────────────────────────────────────────────── */
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 18px;border-radius:999px;font-size:14px;box-shadow:var(--shadow);z-index:50;max-width:90vw;text-align:center}
 
@@ -461,6 +465,19 @@ window.VD_MODULES.ASU01 = {
         statementOpen: "Ich bestätige, dass ich die Unterweisung „{title}“ in der Sprache {lang} erhalten habe. Meine {n} notierte(n) Frage(n) sind offen und werden von einer verantwortlichen Person mit mir geklärt.",
         intro: "Einführung",
         resumeWithin: "Begonnene Unterweisung fortsetzen",
+        geteiltCodeLabel: "Ihr Fortsetzungscode (vier Ziffern)",
+        geteiltCodeHint: "Die vier Ziffern wählen Sie selbst. Werden Sie unterbrochen, machen Sie damit genau dort weiter.",
+        geteiltCodeFehlt: "Bitte wählen Sie vier Ziffern als Fortsetzungscode.",
+        geteiltParken: "Unterbrochene Unterweisung fortsetzen",
+        geteiltParkenHint: "Mit Nachname und Fortsetzungscode geht es dort weiter, wo Sie aufgehört haben.",
+        geteiltFortsetzenTitel: "Unterweisung fortsetzen",
+        geteiltFortsetzenHint: "Geben Sie Ihren Nachnamen und Ihren Fortsetzungscode ein.",
+        geteiltFalsch: "Bitte prüfen Sie Nachname und Fortsetzungscode.",
+        geteiltGesperrtZeit: "Bitte warten Sie {min} Minuten und versuchen Sie es dann erneut.",
+        geteiltNochDa: "Sind Sie noch da?",
+        geteiltNochDaHint: "Gleich wird Ihre Unterweisung gesichert und der Bildschirm für die nächste Person frei.",
+        geteiltWeiter: "Ich bin noch da",
+        geteiltGesichert: "Ihre Unterweisung ist gesichert. Mit Nachname und Fortsetzungscode machen Sie später weiter.",
         footer: "Das System unterstützt die Durchführung und Dokumentation von Unterweisungen und ersetzt keine gesetzlich vorgeschriebenen Schulungen oder praktischen Einweisungen durch qualifiziertes Personal.",
         originalNote: "Die deutsche Originalfassung ist maßgeblich.",
         offlineReady: "Die App ist jetzt auch ohne Internet nutzbar.",
@@ -667,7 +684,7 @@ let MOD=null, SEG_TOTAL=0, SEG_COUNT=0;
 function setModule(id){ MOD=MODULES[id]||null; SEG_TOTAL=MOD?(MOD.languages.de||Object.values(MOD.languages)[0]).segments.length:0; SEG_COUNT=Math.max(0,SEG_TOTAL-1); }
 const modLangs=m=>Object.keys(m.languages||{});
 const modTitle=(m,lang)=>((m.languages[lang]||{}).title)||m.titleDE;
-const APP_VERSION='2.4.0';
+const APP_VERSION='2.5.0';
 /* Ein Gerät mit gesetzter PIN nimmt keine Einrichtung mehr über die URL an. Sonst könnte ein fremder QR-Code das Zielpostfach umleiten. */
 if(!cfg.pinHash){
   if(qp.get('kunde')) cfg.customer=qp.get('kunde');
@@ -675,9 +692,10 @@ if(!cfg.pinHash){
   if(qp.get('video')) cfg.videoBase=qp.get('video');
   if(qp.get('pruefer')) cfg.pruefer=qp.get('pruefer');
   if(qp.has('beispiele')) cfg.beispiele=qp.get('beispiele')!=='0';
+  if(qp.has('geraet')) cfg.geteilt=qp.get('geraet')==='tablet';
   if(qp.get('langs')) cfg.langs=qp.get('langs').split(',').map(s=>s.trim()).filter(k=>LANGS[k]);
   if(!cfg.langs.length) cfg.langs=['de'];
-  if(['kunde','mail','video','langs','pruefer','beispiele'].some(k=>qp.has(k))) saveJSON(CFG_KEY,cfg);
+  if(['kunde','mail','video','langs','pruefer','beispiele','geraet'].some(k=>qp.has(k))) saveJSON(CFG_KEY,cfg);
 }
 
 /* ═══════════════════════════ Zustand ════════════════════════════════ */
@@ -685,7 +703,7 @@ const fresh=()=>({screen:'lang',lang:null,module:null,person:null,segIdx:0,seen:
 let S=Object.assign(fresh(),loadJSON(STATE_KEY,{}));
 /* Personendaten verfallen von selbst: 60 Minuten ohne Aktivität, fertige Nachweise nach 30 Minuten. Geteilte Geräte zeigen so keine fremden Daten. */
 const RESUME_MS=60*60*1000, PROOF_MS=30*60*1000;
-if(S.updatedAt && (Date.now()-S.updatedAt > (S.proof?PROOF_MS:RESUME_MS))) S=fresh();
+if(cfg.geteilt!==true && S.updatedAt && (Date.now()-S.updatedAt > (S.proof?PROOF_MS:RESUME_MS))) S=fresh();
 if(qp.get('lang') && LANGS[qp.get('lang')] && !S.person){S.lang=qp.get('lang');}
 if(S.lang && !LANGS[S.lang]) S=fresh();
 if(S.module && MODULES[S.module]) setModule(S.module); else if(MOD_IDS.length===1) setModule(MOD_IDS[0]);
@@ -699,6 +717,60 @@ function startModule(id){setModule(id);Object.assign(S,{module:id,segIdx:0,seen:
 function wipe(){S=fresh();try{localStorage.removeItem(STATE_KEY);}catch(e){}}
 function loadJSON(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+/* ═══════ Gemeinsam genutztes Gerät (Tablet-Modus, 05.11.2026) ═══════
+   Aktiv mit cfg.geteilt (Einrichtung oder ?geraet=tablet auf Geräten ohne PIN).
+   Jede Person wählt beim Start einen Fortsetzungscode aus vier Ziffern. Nach cfg.sperreMin Minuten
+   ohne Eingabe kommt eine Warnung; ein laufendes Video zählt als Nutzung. Nach 30 Sekunden wird die
+   Unterweisung geparkt und der Bildschirm frei. Geparkte Stände liegen getrennt je Person und öffnen
+   sich nur mit Nachname und Code. Nachweise in der Warteschlange bleiben davon unberührt. */
+const PARK_KEY=STATE_KEY.replace('state','park'), PARK_TRY_KEY=STATE_KEY.replace('state','parkversuch');
+const GETEILT=()=>cfg.geteilt===true;
+const sperreMs=()=>Math.max(1,Number(cfg.sperreMin)||5)*60000;
+const parkLesen=()=>{const max=Math.max(1,Number(cfg.parkStunden)||8)*3600000;return loadJSON(PARK_KEY,[]).filter(p=>p&&Date.now()-p.parkedAt<max);};
+const parkSchreiben=a=>saveJSON(PARK_KEY,a);
+const normName=x=>String(x||'').trim().toLowerCase().normalize('NFC');
+function codeHash(name,code){return sha256('vd-fortsetzen:'+normName(name)+':'+String(code||'').trim());}
+const nachweisSicher=r=>!!(r&&(r.deliveredAt||queueLesen().some(x=>x.rec&&x.rec.id===r.id)));
+function parken(){
+  if(!S.person||!S.person.codeHash||(S.proof&&nachweisSicher(S.proof))){wipe();return;}
+  const id=S.parkId||('p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  S.parkId=id;S.updatedAt=Date.now();
+  const a=parkLesen().filter(p=>p.id!==id);a.push({id,hash:S.person.codeHash,parkedAt:Date.now(),state:S});
+  parkSchreiben(a);wipe();
+}
+async function fortsetzen(name,code){
+  if(!/^\d{4}$/.test(String(code||'').trim())||!normName(name)) return false;
+  const h=await codeHash(name,code);const a=parkLesen();
+  let i=-1;a.forEach((p,k)=>{if(p.hash===h&&(i<0||p.parkedAt>a[i].parkedAt))i=k;});
+  if(i<0) return false;
+  const p=a.splice(i,1)[0];parkSchreiben(a);
+  S=Object.assign(fresh(),p.state);
+  if(S.module&&MODULES[S.module])setModule(S.module);
+  save();return true;
+}
+let letzteNutzung=Date.now(), sperrBox=null, sperrTakt=null;
+const genutzt=()=>{letzteNutzung=Date.now();};
+['pointerdown','keydown','touchstart','wheel','input'].forEach(ev=>document.addEventListener(ev,genutzt,{capture:true,passive:true}));
+document.addEventListener('timeupdate',()=>{if(!document.hidden)genutzt();},true);
+function sperrAus(){clearInterval(sperrTakt);sperrTakt=null;if(sperrBox)sperrBox.remove();sperrBox=null;}
+function sperrJetzt(){sperrAus();document.querySelectorAll('video').forEach(v=>{try{v.pause();}catch(e){}});parken();toast(T('geteiltGesichert'));go('lang');}
+function sperrPruefen(){
+  if(!GETEILT()||!S.person||S.screen==='setup'||S.screen==='lang'||sperrBox) return;
+  const ruhe=Date.now()-letzteNutzung;
+  if(ruhe<sperreMs()) return;
+  if(ruhe>sperreMs()+30000){sperrJetzt();return;}   /* Bildschirm war aus: sofort sichern */
+  let rest=30;const zahl=el('div',{class:'zahl','aria-live':'polite'},String(rest));
+  sperrBox=el('div',{class:'sperre',role:'alertdialog','aria-modal':'true','aria-label':T('geteiltNochDa')},
+    el('div',{class:'card stack'},el('h2',{style:'margin:0'},T('geteiltNochDa')),el('p',{class:'muted',style:'margin:0'},T('geteiltNochDaHint')),zahl,
+      el('button',{class:'btn big block',onclick:()=>{sperrAus();genutzt();}},T('geteiltWeiter'))));
+  document.body.append(sperrBox);
+  sperrTakt=setInterval(()=>{rest--;zahl.textContent=String(Math.max(0,rest));if(rest<=0)sperrJetzt();},1000);
+}
+setInterval(sperrPruefen,5000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sperrPruefen();});
+/* Warteschlange auf geteilten Geräten regelmäßig nachsenden, auch ohne online-Ereignis */
+setInterval(()=>{if(GETEILT()&&navigator.onLine&&queueLesen().length)queueSenden().then(r=>{if(r&&r.gesendet&&S.screen==='proof')render();});},120000);
 
 /* ═══════════════════════════ Hilfen ═════════════════════════════════ */
 const $=(sel,root=document)=>root.querySelector(sel);
@@ -752,7 +824,7 @@ function render(){
   $('#topMeta').innerHTML=(S.lang&&MOD&&S.screen!=='modules'&&S.screen!=='lang')?`<div>${esc(cfg.customer)}</div><div>${esc(MOD.shortDE)} · ${S.lang.toUpperCase()}</div>`
     :`<div>${esc(cfg.customer)}</div>${S.lang?`<div>${S.lang.toUpperCase()}</div>`:''}`;
   $('#foot').innerHTML=`<div>${esc(T('footer'))}</div><div style="margin-top:6px">jetztVerstehstDu${MOD?' · '+esc(MOD.id)+' · '+esc(MOD.version):''}${S.lang&&S.lang!=='de'?' · '+esc(T('originalNote')):''}</div>`;
-  ({lang:vLang,who:vWho,modules:vModules,seg:vSeg,quiz:vQuiz,quizResult:vQuizResult,sign:vSign,proof:vProof,setup:vSetup}[S.screen]||vLang)(main);
+  ({lang:vLang,who:vWho,modules:vModules,seg:vSeg,quiz:vQuiz,quizResult:vQuizResult,sign:vSign,proof:vProof,setup:vSetup,fortsetzen:vFortsetzen}[S.screen]||vLang)(main);
   seitenGroesse();
 }
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -786,7 +858,12 @@ function vLang(main){
   }
   const card=el('div',{class:'card stack'},list);
   main.append(hero,card);
-  if(S.person&&S.lang){ /* laufende Unterweisung fortsetzen */
+  if(GETEILT()&&parkLesen().length){ /* geteiltes Gerät: keine Namen zeigen, nur mit Code fortsetzen */
+    main.append(el('div',{class:'card row between'},
+      el('div',{},el('b',{},T('geteiltParken')),el('div',{class:'small muted'},T('geteiltParkenHint'))),
+      el('button',{class:'btn',onclick:()=>go('fortsetzen')},T('continue'))));
+  }
+  if(S.person&&S.lang&&!GETEILT()){ /* laufende Unterweisung fortsetzen */
     main.append(el('div',{class:'card row between'},
       el('div',{},el('b',{},T('resumeWithin')),el('div',{class:'small muted'},S.person.first+' '+S.person.last+' · '+L().name+(MOD?' · '+MOD.shortDE:''))),
       el('div',{class:'row'},el('button',{class:'btn secondary',onclick:()=>{wipe();render();}},T('newRun')),el('button',{class:'btn',onclick:()=>go(S.proof?'proof':S.quiz&&S.quiz.done?'sign':(S.module?'seg':'modules'))},T('continue')))));
@@ -810,18 +887,21 @@ function vWho(main){
     el('div',{class:'grid-2'},f('first',T('firstName'),null,true),f('last',T('lastName'),null,true)),
     el('div',{class:'grid-2'},f('pnr',T('personnelNo'),T('personnelHint'),false),f('dept',T('department'),null,false)),
     el('div',{class:'field'},el('label',{for:'f_pruefer'},T('prueferLabel')),prSel,el('div',{class:'hint'},T('prueferHint'))),
+    GETEILT()?el('div',{class:'field'},el('label',{for:'f_code'},T('geteiltCodeLabel')),el('input',{class:'input',id:'f_code',type:'password',inputmode:'numeric',maxlength:'4',autocomplete:'off',style:'max-width:9em;letter-spacing:.3em'}),el('div',{class:'hint'},T('geteiltCodeHint'))):null,
     el('div',{class:'notice'},T('privacy'),el('div',{class:'small',style:'margin-top:6px'},cfg.mail?el('span',{},el('span',{html:ICON.mail,style:'display:inline-block;width:16px;vertical-align:-3px;margin-right:6px'}),T('sendMail',{company:cfg.customer})+': ',el('b',{},cfg.mail)):el('b',{style:'color:var(--danger)'},T('noMail')))),
     el('label',{class:'check',for:'consent'},consent,el('span',{},T('consent'))),
     err,
     el('div',{class:'nav'},
       el('button',{class:'btn secondary',onclick:()=>go('lang')},el('span',{html:ICON.back}),T('back')),
-      el('button',{class:'btn big',onclick:()=>{
+      el('button',{class:'btn big',onclick:async()=>{
         const v=id=>$('#f_'+id).value.trim();
         let ok=true;for(const id of ['company','first','last']){const i=$('#f_'+id);i.classList.toggle('invalid',!v(id));if(!v(id))ok=false;}
         prSel.classList.toggle('invalid',!prSel.value);if(!prSel.value)ok=false;
         if(!consent.checked)ok=false;
-        err.hidden=ok;err.textContent=T('required');if(!ok)return;
+        let codeOk=true;if(GETEILT()){codeOk=/^\d{4}$/.test(v('code'));$('#f_code').classList.toggle('invalid',!codeOk);if(!codeOk)ok=false;}
+        err.hidden=ok;err.textContent=codeOk?T('required'):T('geteiltCodeFehlt');if(!ok)return;
         S.person={first:v('first'),last:v('last'),pnr:v('pnr'),dept:v('dept'),company:v('company'),pruefer:prSel.value==='__allein'?T('prueferAllein'):prSel.value};
+        if(GETEILT()){S.person.codeHash=await codeHash(S.person.last,v('code'));S.parkId=null;}
         cfg.customer=v('company');
         S.segIdx=0;S.seen={};S.questions=[];S.quiz=null;S.proof=null;S.doneModules=S.doneModules||{};
         go('modules');
@@ -1300,7 +1380,7 @@ async function createProof(sigData){
   const alleFragen=(S.quizLog||[]).concat(S.quiz.asked.map(a=>({id:a.id,correct:a.correct,secondTry:a.secondTry===true,runde:S.quiz.retry?2:1})));
   const runde1=alleFragen.filter(f=>f.runde===1);
   const rec={id,customer:(S.person&&S.person.company)||cfg.customer,module:MOD.id,moduleTitle:MOD.titleDE,docNo:MOD.docNo,docVersion:MOD.version,lang:S.lang,langName:L().nameDE||L().name,langDraft:!L().checked,
-    person:S.person,startedAt:new Date(S.startedAt).toISOString(),finishedAt:now.toISOString(),durationMs:now-S.startedAt,
+    person:(({codeHash,...p})=>p)(S.person||{}),startedAt:new Date(S.startedAt).toISOString(),finishedAt:now.toISOString(),durationMs:now-S.startedAt,
     segmentsSeen:Object.keys(S.seen),videoFailed:Object.keys(S.videoFail||{}),questionsAsked:alleFragen,correct:runde1.filter(f=>f.correct).length,asked:runde1.length,
     retrained:[...new Set(alleFragen.filter(f=>!f.correct).map(f=>MOD.groupSegment[f.id.split('-')[0]]).filter(Boolean))],
     passed:S.quiz.passed,themen:(S.quizTotal||runde1.length),nachSchulung:runde1.filter(f=>!f.correct).length,
@@ -1378,10 +1458,33 @@ function vProof(main){
       : null,
     el('button',{class:'btn block',style:'background:var(--text);color:var(--bg)',onclick:async ()=>{
       if(cfg.endpoint&&!S.proof.deliveredAt){await queueSenden();
-        if(!S.proof.deliveredAt){toast(T('wipeBlocked'));notfall.hidden=false;render();return;}}
+        if(!S.proof.deliveredAt&&!(GETEILT()&&nachweisSicher(S.proof))){toast(T('wipeBlocked'));notfall.hidden=false;render();return;}}
       wipe();toast(T('wiped'));go('lang');}},T('done')),
     notfall);
   main.append(proof,actions);
+}
+
+/* ── 6b Fortsetzen auf geteiltem Gerät ─────────────────────────────── */
+function vFortsetzen(main){
+  if(!GETEILT()){go('lang');return;}
+  const err=el('div',{class:'err',hidden:true});
+  const name=el('input',{class:'input',id:'r_name',autocomplete:'off',autocapitalize:'words'});
+  const code=el('input',{class:'input',id:'r_code',type:'password',inputmode:'numeric',maxlength:'4',autocomplete:'off',style:'max-width:9em;letter-spacing:.3em'});
+  const los=async()=>{
+    const sp=loadJSON(PARK_TRY_KEY,{n:0,bis:0});
+    if(Date.now()<(sp.bis||0)){err.hidden=false;err.textContent=T('geteiltGesperrtZeit',{min:Math.ceil((sp.bis-Date.now())/60000)});return;}
+    if(await fortsetzen(name.value,code.value)){saveJSON(PARK_TRY_KEY,{n:0,bis:0});genutzt();render();return;}
+    sp.n=(sp.n||0)+1;if(sp.n>=5){sp.bis=Date.now()+2*60000;sp.n=0;}saveJSON(PARK_TRY_KEY,sp);
+    err.hidden=false;err.textContent=T('geteiltFalsch');code.value='';
+  };
+  main.append(el('div',{class:'card stack'},
+    el('h1',{},T('geteiltFortsetzenTitel')),el('p',{class:'muted'},T('geteiltFortsetzenHint')),
+    el('div',{class:'field'},el('label',{for:'r_name'},T('lastName')),name),
+    el('div',{class:'field'},el('label',{for:'r_code'},T('geteiltCodeLabel')),code),
+    err,
+    el('div',{class:'nav'},
+      el('button',{class:'btn secondary',onclick:()=>go('lang')},el('span',{html:ICON.back}),T('back')),
+      el('button',{class:'btn big',onclick:los},T('continue'),el('span',{html:ICON.next})))));
 }
 
 /* ── 7 Einrichtung (Firma / Gerät) ───────────────────────────────────── */
@@ -1393,7 +1496,7 @@ async function checkPin(){
 function vSetup(main){
   const f=(id,label,val,hint,type='text')=>el('div',{class:'field'},el('label',{for:'c_'+id},label),el('input',{class:'input',id:'c_'+id,value:val||'',type}),hint?el('div',{class:'hint'},hint):null);
   const langChecks=Object.keys(LANGS).map(k=>el('label',{class:'check',style:'padding:6px 0'},el('input',{type:'checkbox',id:'l_'+k,checked:cfg.langs.includes(k)}),el('span',{},`${LANGS[k].name} (${k.toUpperCase()})`,LANGS[k].checked?'':el('span',{class:'muted small'},' · ungeprüft'))));
-  const link=()=>{const u=new URL(location.href.split('#')[0].split('?')[0]);u.searchParams.set('kunde',cfg.customer);if(cfg.mail)u.searchParams.set('mail',cfg.mail);if(cfg.videoBase)u.searchParams.set('video',cfg.videoBase);u.searchParams.set('langs',cfg.langs.join(','));return u.toString();};
+  const link=()=>{const u=new URL(location.href.split('#')[0].split('?')[0]);u.searchParams.set('kunde',cfg.customer);if(cfg.mail)u.searchParams.set('mail',cfg.mail);if(cfg.videoBase)u.searchParams.set('video',cfg.videoBase);u.searchParams.set('langs',cfg.langs.join(','));if(cfg.geteilt)u.searchParams.set('geraet','tablet');return u.toString();};
   const linkBox=el('div',{class:'kv'},link());
   main.append(el('div',{class:'card stack'},
     el('h1',{},'Einrichtung'),
@@ -1405,6 +1508,10 @@ function vSetup(main){
       el('input',{type:'checkbox',id:'c_demo',checked:cfg.demoBilder!==false}),
       el('span',{},'Bilder als Beispiel kennzeichnen',
         el('div',{class:'hint',style:'margin:2px 0 0'},'Legt ein Band über die Fotos: hier stehen später Ihre eigenen Aufnahmen. Abschalten, sobald echte Bilder aus dem Betrieb hinterlegt sind.'))),
+    el('label',{class:'check',style:'padding:8px 0'},
+      el('input',{type:'checkbox',id:'c_geteilt',checked:cfg.geteilt===true}),
+      el('span',{},'Gemeinsam genutztes Gerät (Tablet im Betrieb)',
+        el('div',{class:'hint',style:'margin:2px 0 0'},'Jede Person wählt beim Start einen Fortsetzungscode. Nach '+(Number(cfg.sperreMin)||5)+' Minuten ohne Eingabe wird die Unterweisung gesichert und der Bildschirm frei; ein laufendes Video zählt als Nutzung. Fortsetzen nur mit Nachname und Code. Gesicherte Stände verfallen nach '+(Number(cfg.parkStunden)||8)+' Stunden. Dafür den Endpunkt eintragen.'))),
     f('endpoint','Endpunkt für den automatischen Versand',cfg.endpoint,'Adresse des Webhooks oder des Google-Apps-Script-Dienstes. Ist sie eingetragen, geht der Nachweis von selbst dorthin und wartet bei fehlendem Netz in der Schlange.','url'),
     f('responsible','Verantwortliche Person',cfg.responsible,'Name der Person, die Rückfragen der Mitarbeiter klärt. Erscheint in der App und im Nachweis.'),
     f('pruefer','Unterweisende Personen zur Auswahl',cfg.pruefer,'Namen mit Semikolon trennen. Teilnehmende wählen vor dem Start aus, wer die Unterweisung begleitet. Erscheint im Nachweis.'),
@@ -1419,9 +1526,12 @@ function vSetup(main){
         if(!cfg.pinHash && pin.trim().length<4){toast('Bitte eine PIN mit mindestens vier Zeichen setzen.');$('#c_pin').focus();return;}
         if(pin && pin!=='••••'){if(pin.trim().length<4){toast('PIN: mindestens vier Zeichen.');return;}cfg.pinHash=await sha256('vd-pin:'+pin.trim());}
         cfg.customer=$('#c_customer').value.trim()||DEFAULT_CFG.customer;cfg.mail=mail;cfg.endpoint=$('#c_endpoint').value.trim();cfg.demoBilder=$('#c_demo').checked;cfg.responsible=$('#c_responsible').value.trim();cfg.pruefer=$('#c_pruefer').value.trim();cfg.videoBase=$('#c_videoBase').value.trim();cfg.langs=Object.keys(LANGS).filter(k=>$('#l_'+k).checked);if(!cfg.langs.length)cfg.langs=['de'];
+        cfg.geteilt=$('#c_geteilt').checked;
+        if(cfg.geteilt&&!cfg.endpoint){toast('Für ein gemeinsam genutztes Gerät bitte den Endpunkt eintragen.');$('#c_endpoint').focus();return;}
         saveJSON(CFG_KEY,cfg);linkBox.textContent=link();toast('Gespeichert. Einrichtung ist mit PIN geschützt.');}},'Speichern'),
       el('button',{class:'btn secondary',onclick:()=>{history.replaceState(null,'',location.pathname+location.search);go('lang');}},'Zur App'),
-      el('button',{class:'btn ghost',onclick:()=>{if(confirm('Laufende Unterweisung auf diesem Gerät verwerfen?')){wipe();toast('Zurückgesetzt.');}}},'Laufende Unterweisung verwerfen'))));
+      el('button',{class:'btn ghost',onclick:()=>{if(confirm('Laufende Unterweisung auf diesem Gerät verwerfen?')){wipe();toast('Zurückgesetzt.');}}},'Laufende Unterweisung verwerfen'),
+      parkLesen().length?el('button',{class:'btn ghost',onclick:()=>{if(confirm('Alle gesicherten Unterweisungen auf diesem Gerät löschen?')){parkSchreiben([]);toast('Gelöscht.');render();}}},'Gesicherte Unterweisungen löschen ('+parkLesen().length+')'):null)));
 }
 
 /* ═══════════════════════════ PWA ════════════════════════════════════ */
@@ -1433,6 +1543,7 @@ if('serviceWorker'in navigator && !window.VD_SINGLE && location.protocol.startsW
 }
 /* Wortmarke: 5× tippen öffnet die Einrichtung */
 let taps=0,tapT;$('#wordmark').addEventListener('click',e=>{e.preventDefault();taps++;clearTimeout(tapT);tapT=setTimeout(()=>taps=0,1500);if(taps>=5){taps=0;checkPin().then(ok=>{if(ok)go('setup');else toast('PIN stimmt leider nicht.');});}else if(taps===1&&S.screen!=='setup'){/* einfacher Tipp: nichts */}});
+if(GETEILT()&&S.person&&S.screen!=='setup'){parken();S.screen='lang';}
 window.addEventListener('hashchange',()=>{if(location.hash==='#setup')checkPin().then(ok=>{if(ok)go('setup');else{toast('PIN stimmt leider nicht.');history.replaceState(null,'',location.pathname+location.search);}});});
 render();
 })();
